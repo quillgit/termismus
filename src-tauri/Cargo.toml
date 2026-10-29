@@ -1,0 +1,25 @@
+[package]
+name = "mktr-vault"
+version = "0.1.0"
+description = "TERMISMUS - local encrypted SSH host manager"
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+aes-gcm = "0.10"
+argon2 = "0.5"
+rand = "0.8"
+portable-pty = "0.8"
+base64 = "0.22"
+rfd = "0.15"
+
+[profile.release]
+opt-level = "s"
+lto = false
+codegen-units = 16
+strip = true

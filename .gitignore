@@ -1,0 +1,7 @@
+target/
+node_modules/
+.pnpm-store/
+dist/
+gen/
+*.tmp
+app-icon.png

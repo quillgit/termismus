@@ -1,0 +1,15 @@
+{
+  "name": "mktr-vault",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "tauri": "tauri",
+    "dev": "tauri dev",
+    "build": "tauri build"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2",
+    "xterm": "5.3.0",
+    "xterm-addon-fit": "0.8.0"
+  }
+}

@@ -1,0 +1,1294 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TERMISMUS</title>
+<link rel="stylesheet" href="vendor/xterm.css">
+<style>
+:root{
+  --bg:#0d1117; --panel:#141920; --panel2:#1a2030; --line:#232d3f;
+  --txt:#dce6f5; --muted:#5d6f8a; --accent:#4f8ef7; --accent2:#2a6de0;
+  --danger:#e5484d; --ok:#22c068; --chip:#1a2030; --term:#090c10;
+  --orange:#d08e30; --yellow:#e5c840;
+  --tb-h:40px; --bar-h:44px; --tab-h:33px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:"Segoe UI",system-ui,sans-serif;background:var(--bg);color:var(--txt);font-size:14px;overflow:hidden}
+button{font-family:inherit;cursor:pointer}
+input,textarea{font-family:inherit}
+.hidden{display:none!important}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--line);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--muted)}
+
+/* ── Titlebar (frameless drag region) ── */
+#titlebar{
+  position:fixed;top:0;left:0;right:0;height:var(--tb-h);
+  display:flex;align-items:center;
+  background:rgba(13,17,23,.96);backdrop-filter:blur(24px);
+  border-bottom:1px solid var(--line);z-index:1000;
+  -webkit-app-region:drag;app-region:drag;
+}
+.tb-logo{display:flex;align-items:center;gap:7px;padding:0 14px;flex:none;-webkit-app-region:no-drag;app-region:no-drag}
+.tb-logo-txt{font-size:14px;font-weight:800;letter-spacing:.4px;pointer-events:none}
+.tb-logo-txt em{font-style:normal;color:var(--accent)}
+.tb-drag{flex:1;height:100%;-webkit-app-region:drag;app-region:drag}
+.wbtn{
+  width:46px;height:var(--tb-h);border:none;background:transparent;
+  color:var(--muted);display:flex;align-items:center;justify-content:center;
+  -webkit-app-region:no-drag;app-region:no-drag;
+  transition:background .13s,color .13s;
+}
+.wbtn:hover{background:rgba(255,255,255,.06);color:var(--txt)}
+.wbtn.wclose:hover{background:var(--danger);color:#fff}
+.wbtn svg{pointer-events:none}
+
+/* ── Toolbar ── */
+#toolbar{
+  position:fixed;top:var(--tb-h);left:0;right:0;height:var(--bar-h);
+  display:flex;align-items:center;gap:1px;padding:0 8px;
+  background:var(--panel);border-bottom:1px solid var(--line);z-index:900;
+}
+.tsep{width:1px;height:20px;background:var(--line);margin:0 5px;flex:none}
+.tcount{font-size:11px;color:var(--muted);padding:0 6px;flex:none;pointer-events:none}
+
+/* Icon button */
+.ibtn{
+  width:34px;height:34px;border:none;border-radius:8px;background:transparent;
+  color:var(--muted);display:flex;align-items:center;justify-content:center;
+  flex:none;transition:background .12s,color .12s;position:relative;
+}
+.ibtn svg{width:15px;height:15px;pointer-events:none}
+.ibtn:hover{background:var(--panel2);color:var(--txt)}
+.ibtn.active{background:var(--accent)!important;color:#fff!important}
+.ibtn.ok:hover{background:rgba(34,192,104,.13);color:var(--ok)}
+.ibtn.warn:hover{background:rgba(208,142,48,.13);color:var(--orange)}
+.ibtn.danger:hover{background:rgba(229,72,77,.13);color:var(--danger)}
+
+/* Tooltip */
+#tip{
+  position:fixed;background:var(--panel2);border:1px solid var(--line);
+  color:var(--txt);font-size:12px;padding:4px 10px;border-radius:7px;
+  pointer-events:none;white-space:nowrap;z-index:9999;
+  opacity:0;transition:opacity .12s;
+  box-shadow:0 4px 18px rgba(0,0,0,.5);
+}
+#tip.show{opacity:1}
+
+/* ── Lock screen ── */
+#lock{
+  position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+  background:var(--bg);z-index:600;
+  padding-top:calc(var(--tb-h) + var(--bar-h));
+}
+.lockcard{
+  width:360px;background:var(--panel);border:1px solid var(--line);
+  border-radius:16px;padding:32px;box-shadow:0 20px 60px rgba(0,0,0,.6);
+}
+.lk-logo{text-align:center;margin-bottom:6px;font-size:26px;font-weight:800;letter-spacing:.5px}
+.lk-logo em{font-style:normal;color:var(--accent)}
+.lk-sub{color:var(--muted);text-align:center;font-size:13px;margin-bottom:24px}
+.f{margin-bottom:14px}
+.f label{display:block;color:var(--muted);font-size:12px;margin-bottom:5px;font-weight:500}
+.f input{
+  width:100%;padding:11px 13px;background:var(--panel2);
+  border:1px solid var(--line);border-radius:10px;color:var(--txt);outline:none;font-size:14px;
+  transition:border-color .14s;
+}
+.f input:focus{border-color:var(--accent)}
+.chk{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:13px;margin:4px 0 18px}
+.btn{padding:11px 16px;border:none;border-radius:10px;font-weight:600;font-size:13px;cursor:pointer;transition:background .13s,transform .08s}
+.btn:active{transform:scale(.97)}
+.btn.full{width:100%}
+.btn.primary{background:var(--accent);color:#fff}.btn.primary:hover{background:var(--accent2)}
+.btn.green{background:var(--ok);color:#fff}.btn.green:hover{background:#1aad58}
+.btn.orange{background:var(--orange);color:#fff}.btn.orange:hover{background:#b87a24}
+.btn.ghost{background:var(--panel2);border:1px solid var(--line);color:var(--txt)}.btn.ghost:hover{border-color:var(--accent)}
+.btn.red{background:transparent;border:1px solid var(--danger);color:var(--danger)}.btn.red:hover{background:rgba(229,72,77,.1)}
+.err{color:var(--danger);font-size:12px;min-height:16px;margin-top:6px;text-align:center}
+
+/* ── App layout ── */
+#app{
+  position:fixed;
+  top:calc(var(--tb-h) + var(--bar-h));
+  left:0;right:0;bottom:0;
+  display:flex;flex-direction:column;
+}
+.tabbar{
+  display:flex;align-items:stretch;height:var(--tab-h);
+  background:var(--bg);border-bottom:1px solid var(--line);overflow-x:auto;flex:none;
+}
+.tabbar::-webkit-scrollbar{height:0}
+.tab{
+  display:flex;align-items:center;gap:6px;padding:0 13px;
+  max-width:200px;min-width:80px;border-right:1px solid var(--line);
+  color:var(--muted);cursor:pointer;white-space:nowrap;font-size:12.5px;flex:none;
+  transition:background .11s,color .11s;
+}
+.tab:hover{color:var(--txt);background:rgba(255,255,255,.03)}
+.tab.active{background:var(--panel);color:var(--txt);border-bottom:2px solid var(--accent)}
+.tab .dot{width:6px;height:6px;border-radius:50%;background:var(--ok);flex:none}
+.tab.dead .dot{background:var(--danger)}
+.tab .ttl{overflow:hidden;text-overflow:ellipsis;flex:1}
+.tab .tx{color:var(--muted);border:none;background:none;padding:2px 4px;font-size:13px;border-radius:4px;flex:none}
+.tab .tx:hover{color:var(--danger);background:rgba(229,72,77,.1)}
+
+/* Stack */
+.stack{position:relative;flex:1;min-height:0;background:var(--term);overflow:hidden}
+.pane{position:absolute;inset:0}
+.pane.term{overflow:hidden;background:var(--term);display:flex;flex-direction:column}
+.term-label{
+  display:none;padding:5px 10px;background:var(--panel2);
+  color:var(--muted);font-size:12px;border-bottom:1px solid var(--line);
+  flex:none;user-select:none;align-items:center;gap:8px;
+}
+.term-label .tl-dot{width:6px;height:6px;border-radius:50%;background:var(--ok);flex:none}
+.term-label.dead .tl-dot{background:var(--danger)}
+.term-label .tl-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.term-label .tl-close{border:none;background:none;color:var(--muted);font-size:12px;padding:0 3px;border-radius:3px;flex:none}
+.term-label .tl-close:hover{color:var(--danger)}
+.termhost{flex:1;min-height:0;overflow:hidden;padding:4px 6px}
+
+/* ── Grid mode ── */
+.pane.term.grid-item{
+  position:absolute;border:1px solid var(--line);border-radius:10px;
+  box-shadow:0 6px 28px rgba(0,0,0,.55);overflow:hidden;
+  transition:box-shadow .15s;
+}
+.pane.term.grid-item:hover{box-shadow:0 8px 36px rgba(0,0,0,.7)}
+.pane.term.grid-item .term-label{display:flex;cursor:move}
+.resize-corner{
+  position:absolute;bottom:0;right:0;width:16px;height:16px;cursor:se-resize;z-index:5;
+}
+.resize-corner::after{
+  content:'';position:absolute;bottom:3px;right:3px;
+  width:9px;height:9px;
+  border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);
+  border-radius:0 0 3px 0;opacity:.5;
+}
+
+/* ── Home / cards ── */
+#homePane{background:var(--bg);overflow-y:auto}
+.cards-bar{display:flex;align-items:center;gap:10px;padding:15px 20px 10px;position:sticky;top:0;background:var(--bg);z-index:5}
+.cards-bar h2{margin:0;font-size:17px;font-weight:700}
+.cards-search{
+  flex:1;max-width:300px;padding:7px 12px;
+  background:var(--panel2);border:1px solid var(--line);border-radius:8px;
+  color:var(--txt);outline:none;font-size:13px;transition:border-color .14s;
+}
+.cards-search:focus{border-color:var(--accent)}
+.cards-body{padding:0 20px 24px}
+.grp-hdr{
+  color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;
+  padding:14px 0 7px;border-bottom:1px solid var(--line);margin-bottom:10px;
+}
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-bottom:8px}
+.hcard{
+  background:var(--panel);border:1px solid var(--line);border-radius:12px;
+  padding:14px;cursor:pointer;
+  transition:border-color .14s,box-shadow .14s,transform .1s;
+}
+.hcard:hover{border-color:var(--accent);box-shadow:0 3px 18px rgba(79,142,247,.14);transform:translateY(-1px)}
+.hc-name{font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hc-addr{color:var(--muted);font-size:12px;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hc-acts{display:flex;gap:5px;margin-top:10px}
+.hca{
+  padding:4px 10px;border-radius:6px;font-size:12px;font-weight:500;
+  border:1px solid var(--line);background:var(--chip);color:var(--muted);cursor:pointer;
+  transition:border-color .12s,color .12s,background .12s;
+}
+.hca.ssh:hover{border-color:var(--ok);color:var(--ok);background:rgba(34,192,104,.08)}
+.hca.sftp:hover{border-color:var(--orange);color:var(--orange);background:rgba(208,142,48,.08)}
+.hca.edit:hover{border-color:var(--accent);color:var(--accent);background:rgba(79,142,247,.08)}
+.no-hosts{color:var(--muted);text-align:center;padding:60px 20px}
+
+/* ── Side panel ── */
+.sp-bg{position:fixed;inset:0;background:rgba(0,0,0,.38);z-index:499;opacity:0;pointer-events:none;transition:opacity .2s}
+.sp-bg.open{opacity:1;pointer-events:auto}
+.sidepanel{
+  position:fixed;top:0;right:0;bottom:0;width:420px;max-width:90vw;
+  background:var(--panel);border-left:1px solid var(--line);
+  transform:translateX(100%);transition:transform .22s cubic-bezier(.4,0,.2,1);
+  z-index:500;display:flex;flex-direction:column;
+  box-shadow:-8px 0 40px rgba(0,0,0,.45);
+}
+.sidepanel.open{transform:translateX(0)}
+.sp-hdr{display:flex;align-items:center;gap:10px;padding:15px 18px;border-bottom:1px solid var(--line);flex:none}
+.sp-hdr h2{margin:0;font-size:16px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sp-saved{color:var(--ok);font-size:11.5px;opacity:0;transition:opacity .3s;flex:none;display:flex;align-items:center;gap:3px}
+.sp-saved.show{opacity:1}
+.sp-close{background:none;border:none;color:var(--muted);padding:6px 8px;border-radius:7px;font-size:16px;flex:none}
+.sp-close:hover{color:var(--txt);background:var(--panel2)}
+.sp-body{flex:1;overflow-y:auto;padding:16px 18px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.g{margin-bottom:14px}
+.g label{display:block;color:var(--muted);font-size:12px;margin-bottom:5px;font-weight:500}
+.g input,.g textarea{
+  width:100%;padding:9px 11px;background:var(--panel2);
+  border:1px solid var(--line);border-radius:9px;color:var(--txt);outline:none;font-size:13px;
+  transition:border-color .14s;
+}
+.g input:focus,.g textarea:focus{border-color:var(--accent)}
+.g textarea{min-height:52px;resize:vertical}
+.pwrow{display:flex;gap:8px}.pwrow input{flex:1}
+.mini{background:var(--panel2);border:1px solid var(--line);color:var(--muted);border-radius:9px;padding:0 12px;font-size:13px;cursor:pointer}
+.mini:hover{border-color:var(--accent);color:var(--txt)}
+.sp-foot{display:flex;gap:8px;padding:14px 18px;border-top:1px solid var(--line);flex:none;flex-wrap:wrap}
+
+/* ── Launcher ── */
+.lnbg{
+  position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:800;
+  display:flex;align-items:flex-start;justify-content:center;padding-top:10vh;
+}
+.launcher{
+  width:560px;max-height:62vh;background:var(--panel);border:1px solid var(--line);
+  border-radius:16px;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,.75);
+  display:flex;flex-direction:column;
+}
+.ln-input{
+  width:100%;padding:15px 18px;background:transparent;border:none;
+  border-bottom:1px solid var(--line);color:var(--txt);font-size:16px;outline:none;
+}
+.ln-results{overflow-y:auto;flex:1}
+.ln-grp{color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.6px;padding:10px 18px 4px}
+.ln-item{display:flex;align-items:center;padding:9px 18px;cursor:pointer;gap:12px;transition:background .1s}
+.ln-item:hover,.ln-item.sel{background:var(--panel2)}
+.li-inf{flex:1;min-width:0}
+.li-name{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.li-addr{color:var(--muted);font-size:12px}
+.li-acts{display:flex;gap:6px;flex:none}
+.lact{
+  background:var(--chip);border:1px solid var(--line);color:var(--muted);
+  padding:4px 11px;border-radius:6px;font-size:12px;cursor:pointer;
+  transition:border-color .12s,color .12s;
+}
+.lact:hover{border-color:var(--accent);color:var(--accent)}
+.ln-foot{padding:8px 18px;border-top:1px solid var(--line);color:var(--muted);font-size:11px;display:flex;gap:14px}
+.ln-foot kbd{background:var(--bg);padding:1px 5px;border-radius:3px;font-size:10.5px}
+
+/* ── SFTP ── */
+.sftp-wrap{display:grid;grid-template-columns:1fr 1fr;height:100%;background:var(--bg)}
+.sftp-side{display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.sftp-side+.sftp-side{border-left:1px solid var(--line)}
+.sftp-hdr{display:flex;align-items:center;gap:6px;padding:8px 10px;background:var(--panel);border-bottom:1px solid var(--line);flex:none}
+.sftp-lbl{font-weight:600;font-size:13px;flex:none;min-width:52px}
+.sftp-hdr input{flex:1;padding:5px 8px;background:var(--panel2);border:1px solid var(--line);border-radius:6px;color:var(--txt);font-size:12px;outline:none;font-family:Consolas,monospace}
+.sftp-hdr input:focus{border-color:var(--accent)}
+.sftp-files{flex:1;overflow-y:auto}
+.sftp-row{display:flex;align-items:center;padding:4px 10px;cursor:pointer;gap:8px;font-size:13px;transition:background .1s}
+.sftp-row:hover{background:var(--panel2)}
+.sftp-row.selected{background:var(--accent);color:#fff}
+.sftp-row .ico{width:18px;text-align:center;flex:none;font-size:12px}
+.sftp-row .fn{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sftp-row .fs{color:var(--muted);font-size:12px;flex:none;min-width:55px;text-align:right}
+.sftp-row.selected .fs{color:rgba(255,255,255,.7)}
+.sftp-bar{display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--panel);border-top:1px solid var(--line);flex:none}
+.sftp-st{flex:1;color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sftp-load{display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);font-size:13px;flex-direction:column;gap:8px}
+.sftp-spin{width:22px;height:22px;border:2.5px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.sact{background:var(--chip);border:1px solid var(--line);color:var(--muted);padding:5px 11px;border-radius:7px;font-size:12px;cursor:pointer;transition:border-color .12s,color .12s}
+.sact:hover{border-color:var(--accent);color:var(--accent)}
+
+/* ── Modal ── */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:700;display:flex;align-items:center;justify-content:center}
+.modal-card{width:440px;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:26px;box-shadow:0 20px 56px rgba(0,0,0,.65)}
+.modal-card h3{margin:0 0 18px;font-size:17px;font-weight:700}
+.file-pick-row{display:flex;gap:8px}
+.file-pick-row input{flex:1;cursor:default}
+.file-pick-row .btn{flex:none;padding:9px 14px;white-space:nowrap}
+.modal-acts{display:flex;gap:8px;margin-top:18px}
+
+/* ── Toast ── */
+.toast{
+  position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
+  background:var(--panel2);border:1px solid var(--line);
+  padding:10px 18px;border-radius:10px;opacity:0;
+  transition:opacity .2s;pointer-events:none;z-index:2000;font-size:13px;
+  box-shadow:0 4px 20px rgba(0,0,0,.5);
+}
+.toast.show{opacity:1}
+</style>
+</head>
+<body>
+
+<!-- ── Titlebar ── -->
+<div id="titlebar">
+  <div class="tb-logo" data-tauri-drag-region>
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" style="flex:none;pointer-events:none">
+      <rect width="20" height="20" rx="5" fill="#1a2a4a"/>
+      <rect x="3" y="5" width="11" height="8" rx="1.5" fill="#4f8ef7" opacity=".9"/>
+      <rect x="4" y="6" width="9" height="6" rx="1" fill="#090c10"/>
+      <text x="5.5" y="11" font-size="4.5" fill="#4f8ef7" font-family="Consolas,monospace">›_</text>
+      <path d="M14 10a4 4 0 0 1 0 0" stroke="#22c068" stroke-width="1.5" stroke-linecap="round"/>
+      <ellipse cx="16" cy="11" rx="3" ry="2" stroke="#22c068" stroke-width="1" fill="none" opacity=".7"/>
+    </svg>
+    <span class="tb-logo-txt">TERMI<em>SMUS</em></span>
+  </div>
+  <div class="tb-drag" data-tauri-drag-region></div>
+  <button class="wbtn" id="winMin" title="Minimize">
+    <svg width="10" height="1" viewBox="0 0 10 1"><rect width="10" height="1" fill="currentColor"/></svg>
+  </button>
+  <button class="wbtn" id="winMax" title="Maximize">
+    <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.1"><rect x=".55" y=".55" width="8.9" height="8.9" rx="1.3"/></svg>
+  </button>
+  <button class="wbtn wclose" id="winClose" title="Close">
+    <svg width="10" height="10" viewBox="0 0 10 10" stroke="currentColor" stroke-width="1.4"><line x1="1" y1="1" x2="9" y2="9"/><line x1="9" y1="1" x2="1" y2="9"/></svg>
+  </button>
+</div>
+
+<!-- ── Toolbar ── -->
+<div id="toolbar">
+  <span class="tcount" id="count"></span>
+  <div class="tsep"></div>
+
+  <button class="ibtn" id="btnGrid" data-tip="Grid View  Ctrl+G">
+    <svg viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1.2"/><rect x="9" y="1" width="6" height="6" rx="1.2"/><rect x="1" y="9" width="6" height="6" rx="1.2"/><rect x="9" y="9" width="6" height="6" rx="1.2"/></svg>
+  </button>
+
+  <button class="ibtn" id="btnLauncher" data-tip="Quick Open  Ctrl+K">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="6.5" cy="6.5" r="4.5"/><line x1="10" y1="10" x2="14" y2="14"/></svg>
+  </button>
+
+  <div class="tsep"></div>
+
+  <button class="ibtn ok" id="btnNew" data-tip="New Host">
+    <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1.5a1 1 0 0 1 1 1v4.5h4.5a1 1 0 1 1 0 2H9v4.5a1 1 0 1 1-2 0V9H2.5a1 1 0 1 1 0-2H7V2.5a1 1 0 0 1 1-1z"/></svg>
+  </button>
+
+  <button class="ibtn" id="btnImport" data-tip="Import SSH Recovery">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 2v8m0 0L5.5 7.5M8 10l2.5-2.5"/><path d="M2.5 12v.5A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5V12"/></svg>
+  </button>
+
+  <div class="tsep"></div>
+
+  <button class="ibtn" id="btnBackup" data-tip="Backup Vault + SSH Keys">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4.5 9.5A4 4 0 1 1 12 10M4.5 9.5H3a2 2 0 0 0 0 4h10a2 2 0 0 0 0-4h-1.5"/><path d="M8 6v5m0 0L6 9m2 2 2-2"/></svg>
+  </button>
+
+  <button class="ibtn" id="btnRestore" data-tip="Restore from Backup File">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4.5 7.5A4 4 0 1 1 12 8M4.5 7.5H3a2 2 0 0 0 0 4h10a2 2 0 0 0 0-4h-1.5"/><path d="M8 13V9m0 0-2 2m2-2 2 2"/></svg>
+  </button>
+
+  <div class="tsep"></div>
+
+  <button class="ibtn danger" id="btnLock" data-tip="Lock Vault">
+    <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1.5A2.5 2.5 0 0 0 5.5 4v1.5H4a1 1 0 0 0-1 1V13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V6.5a1 1 0 0 0-1-1h-1.5V4A2.5 2.5 0 0 0 8 1.5zm-1 2.5a1 1 0 1 1 2 0v1.5H7V4zM8 8.5a1 1 0 0 1 .5 1.87v1.13a.5.5 0 0 1-1 0v-1.13A1 1 0 0 1 8 8.5z"/></svg>
+  </button>
+</div>
+
+<!-- ── Lock screen ── -->
+<div id="lock">
+  <div class="lockcard">
+    <div class="lk-logo">TERMI<em>SMUS</em></div>
+    <div class="lk-sub" id="lockSub">Membuka vault...</div>
+    <div class="f"><label id="pwLabel">Master password</label>
+      <input id="masterPw" type="password" autocomplete="off" placeholder="••••••••"/>
+    </div>
+    <div class="f hidden" id="pw2Wrap"><label>Ulangi password</label>
+      <input id="masterPw2" type="password" autocomplete="off" placeholder="••••••••"/>
+    </div>
+    <label class="chk hidden" id="seedWrap">
+      <input id="seedChk" type="checkbox" checked/> Impor host dari SSH config
+    </label>
+    <button class="btn primary full" id="lockBtn">Buka</button>
+    <div class="err" id="lockErr"></div>
+  </div>
+</div>
+
+<!-- ── App ── -->
+<div id="app" class="hidden">
+  <div class="tabbar" id="tabbar"></div>
+  <div class="stack" id="stack">
+    <div class="pane" id="homePane">
+      <div class="cards-bar">
+        <h2>Hosts</h2>
+        <input class="cards-search" id="cardsSearch" placeholder="Cari host..."/>
+      </div>
+      <div class="cards-body" id="cardsBody"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Side panel editor ── -->
+<div class="sp-bg" id="spBg"></div>
+<div class="sidepanel" id="sidePanel">
+  <div class="sp-hdr">
+    <h2 id="spTitle">Host</h2>
+    <span class="sp-saved" id="spSaved">
+      <svg viewBox="0 0 12 12" fill="currentColor" width="11" height="11"><path d="M10.5 2.5 5 9 1.5 5.5l1-1L5 7l4.5-5.5 1 1z"/></svg>
+      Tersimpan
+    </span>
+    <button class="sp-close" id="spClose">&#215;</button>
+  </div>
+  <div class="sp-body" id="spBody"></div>
+  <div class="sp-foot" id="spFoot"></div>
+</div>
+
+<!-- ── Launcher ── -->
+<div id="lnBg" class="lnbg hidden">
+  <div class="launcher">
+    <input class="ln-input" id="lnQ" placeholder="Cari host, IP, atau grup..." autocomplete="off"/>
+    <div class="ln-results" id="lnResults"></div>
+    <div class="ln-foot">
+      <span><kbd>↑↓</kbd> Nav</span>
+      <span><kbd>Enter</kbd> Edit</span>
+      <span><kbd>Ctrl+Enter</kbd> SSH</span>
+      <span><kbd>Ctrl+Shift+Enter</kbd> SFTP</span>
+      <span><kbd>Esc</kbd> Tutup</span>
+    </div>
+  </div>
+</div>
+
+<!-- ── Restore modal ── -->
+<div id="restoreModal" class="modal-bg hidden">
+  <div class="modal-card">
+    <h3>Restore Backup</h3>
+    <div class="f">
+      <label>File backup (.tmb)</label>
+      <div class="file-pick-row">
+        <input id="restorePathDisplay" readonly placeholder="Klik 'Pilih File'..." style="color:var(--muted)"/>
+        <button class="btn ghost" id="pickRestoreBtn">Pilih File</button>
+      </div>
+    </div>
+    <div class="f">
+      <label>Password (digunakan saat backup)</label>
+      <input id="restorePw" type="password" placeholder="••••••••"/>
+    </div>
+    <div class="modal-acts">
+      <button class="btn green" id="doRestoreBtn">Restore</button>
+      <button class="btn ghost" id="cancelRestoreBtn">Batal</button>
+    </div>
+    <div class="err" id="restoreErr"></div>
+  </div>
+</div>
+
+<div id="tip"></div>
+<div class="toast" id="toast"></div>
+
+<script src="vendor/xterm.js"></script>
+<script src="vendor/addon-fit.js"></script>
+<script src="vendor/interact.min.js"></script>
+<script>
+'use strict';
+const invoke = window.__TAURI__.core.invoke;
+const listen  = window.__TAURI__.event.listen;
+const appWin  = window.__TAURI__.window.getCurrentWindow();
+
+let MASTER = null, HOSTS = [], selectedId = null;
+const $ = s => document.querySelector(s);
+const esc = s => String(s??'').replace(/[&<>"']/g, c =>
+  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+// ── Window controls ──
+$('#winMin').onclick  = () => appWin.minimize();
+$('#winMax').onclick  = () => appWin.toggleMaximize();
+$('#winClose').onclick = () => appWin.close();
+
+// ── Tooltip ──
+const tipEl = $('#tip');
+let tipTimer;
+document.addEventListener('mouseover', e => {
+  const el = e.target.closest('[data-tip]');
+  clearTimeout(tipTimer);
+  if (!el) { tipEl.classList.remove('show'); return; }
+  tipTimer = setTimeout(() => {
+    const r = el.getBoundingClientRect();
+    tipEl.textContent = el.dataset.tip;
+    tipEl.style.left  = (r.left + r.width / 2) + 'px';
+    tipEl.style.top   = (r.bottom + 6) + 'px';
+    tipEl.style.transform = 'translateX(-50%)';
+    tipEl.classList.add('show');
+  }, 320);
+});
+document.addEventListener('mouseout', e => {
+  if (!e.relatedTarget?.closest('[data-tip]')) {
+    clearTimeout(tipTimer);
+    tipEl.classList.remove('show');
+  }
+});
+
+// ── Toast ──
+function toast(m) {
+  const t = $('#toast'); t.textContent = m; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ── Lock / Vault ──
+async function initLock() {
+  const exists = await invoke('vault_exists');
+  if (exists) {
+    $('#lockSub').textContent = 'Masukkan master password.';
+    $('#pw2Wrap').classList.add('hidden');
+    $('#seedWrap').classList.add('hidden');
+    $('#pwLabel').textContent = 'Master password';
+    $('#lockBtn').textContent = 'Buka';
+  } else {
+    $('#lockSub').textContent = 'Vault belum ada — buat master password baru.';
+    $('#pw2Wrap').classList.remove('hidden');
+    $('#seedWrap').classList.remove('hidden');
+    $('#pwLabel').textContent = 'Password baru';
+    $('#lockBtn').textContent = 'Buat Vault';
+  }
+  $('#masterPw').focus();
+}
+$('#lockBtn').onclick = doLock;
+$('#masterPw').addEventListener('keydown', e => { if (e.key === 'Enter') doLock(); });
+$('#masterPw2').addEventListener('keydown', e => { if (e.key === 'Enter') doLock(); });
+
+async function doLock() {
+  const err = $('#lockErr'); err.textContent = '';
+  const pw = $('#masterPw').value;
+  const exists = await invoke('vault_exists');
+  try {
+    if (exists) {
+      HOSTS = await invoke('unlock_vault', { master: pw });
+    } else {
+      if (pw.length < 4) { err.textContent = 'Minimal 4 karakter.'; return; }
+      if (pw !== $('#masterPw2').value) { err.textContent = 'Password tidak sama.'; return; }
+      HOSTS = await invoke('create_vault', { master: pw, seed: $('#seedChk').checked });
+    }
+    MASTER = pw;
+    $('#lock').classList.add('hidden');
+    $('#app').classList.remove('hidden');
+    renderCards(); renderTabs();
+    toast(`Vault terbuka · ${HOSTS.length} host`);
+  } catch(e) { err.textContent = String(e); }
+}
+
+async function persist() {
+  try { await invoke('save_vault', { master: MASTER, hosts: HOSTS }); }
+  catch(e) { toast('Gagal simpan: ' + e); }
+}
+
+// ── Toolbar actions ──
+$('#btnNew').onclick = () => {
+  const id = 'new-' + Date.now();
+  const h = { id, label:'', hostname:'', user:'', port:'', identity_file:'', password:'', proxy_command:'', group:'lainnya', notes:'' };
+  switchTab('home'); openPanel(h);
+};
+$('#btnImport').onclick = async () => {
+  const rec = await invoke('recovered_hosts'); let added = 0;
+  rec.forEach(r => {
+    if (!HOSTS.some(h => h.hostname.toLowerCase() === r.hostname.toLowerCase() && (h.user||'') === (r.user||''))) {
+      HOSTS.push(r); added++;
+    }
+  });
+  await persist(); renderCards(); renderTabs();
+  toast(added ? `${added} host diimpor` : 'Tidak ada host baru');
+};
+$('#btnLock').onclick = () => {
+  Object.keys(SESS).forEach(closeTerminal);
+  Object.keys(SFTP_STATE).forEach(closeSftp);
+  if (gridMode) exitGridMode();
+  MASTER = null; HOSTS = []; selectedId = null;
+  $('#masterPw').value = ''; $('#masterPw2').value = '';
+  $('#app').classList.add('hidden');
+  $('#lock').classList.remove('hidden');
+  initLock();
+};
+
+// ── Backup ──
+$('#btnBackup').onclick = async () => {
+  const ts = new Date().toISOString().slice(0,10);
+  const dest = await invoke('pick_save_file', { defaultName: `termismus-backup-${ts}.tmb` });
+  if (!dest) return;
+  try {
+    const path = await invoke('backup_create', { master: MASTER, dest });
+    toast('Backup tersimpan: ' + path.split(/[\\/]/).pop());
+  } catch(e) { toast('Gagal backup: ' + e); }
+};
+
+// ── Restore ──
+let _restorePath = '';
+$('#btnRestore').onclick = () => {
+  _restorePath = '';
+  $('#restorePathDisplay').value = '';
+  $('#restorePw').value = MASTER;
+  $('#restoreErr').textContent = '';
+  $('#restoreModal').classList.remove('hidden');
+};
+$('#pickRestoreBtn').onclick = async () => {
+  const p = await invoke('pick_open_file');
+  if (!p) return;
+  _restorePath = p;
+  $('#restorePathDisplay').value = p.split(/[\\/]/).pop();
+  $('#restorePathDisplay').style.color = 'var(--txt)';
+};
+$('#doRestoreBtn').onclick = async () => {
+  if (!_restorePath) { $('#restoreErr').textContent = 'Pilih file backup dulu.'; return; }
+  const pw = $('#restorePw').value;
+  $('#restoreErr').textContent = '';
+  try {
+    const hosts = await invoke('backup_restore', { master: pw, path: _restorePath });
+    MASTER = pw; HOSTS = hosts;
+    renderCards(); renderTabs();
+    $('#restoreModal').classList.add('hidden');
+    toast(`Restore berhasil · ${hosts.length} host + SSH keys`);
+  } catch(e) { $('#restoreErr').textContent = String(e); }
+};
+$('#cancelRestoreBtn').onclick = () => $('#restoreModal').classList.add('hidden');
+
+// ── Cards (Home) ──
+function renderCards() {
+  const q = ($('#cardsSearch').value || '').toLowerCase();
+  const f = HOSTS.filter(h => [h.label, h.hostname, h.user, h.group].some(x => (x||'').toLowerCase().includes(q)));
+  $('#count').textContent = `${HOSTS.length} host`;
+  const body = $('#cardsBody');
+  if (!HOSTS.length) {
+    body.innerHTML = `<div class="no-hosts"><div style="font-size:32px;font-weight:800;margin-bottom:10px">TERMI<span style="color:var(--accent)">SMUS</span></div><div>Klik <strong>+</strong> untuk menambah host atau impor dari SSH config.</div></div>`;
+    return;
+  }
+  const groups = {};
+  f.forEach(h => { const g = h.group || 'lainnya'; (groups[g] = groups[g] || []).push(h); });
+  let html = '';
+  if (!f.length) {
+    html = `<div class="no-hosts">Tidak ada host cocok.</div>`;
+  } else {
+    Object.keys(groups).sort().forEach(g => {
+      html += `<div class="grp-hdr">${esc(g)} (${groups[g].length})</div><div class="cards-grid">`;
+      groups[g].sort((a,b) => (a.label||a.hostname).localeCompare(b.label||b.hostname)).forEach(h => {
+        const addr = `${h.user ? esc(h.user)+'@' : ''}${esc(h.hostname)}${h.port ? ':'+esc(h.port) : ''}`;
+        html += `<div class="hcard" data-id="${esc(h.id)}">
+          <div class="hc-name">${esc(h.label||h.hostname)}</div>
+          <div class="hc-addr">${addr}</div>
+          <div class="hc-acts">
+            <button class="hca ssh" data-id="${esc(h.id)}">SSH</button>
+            <button class="hca sftp" data-id="${esc(h.id)}">SFTP</button>
+            <button class="hca edit" data-id="${esc(h.id)}">Edit</button>
+          </div>
+        </div>`;
+      });
+      html += `</div>`;
+    });
+  }
+  body.innerHTML = html;
+  body.querySelectorAll('.hcard').forEach(card => {
+    card.addEventListener('click', e => {
+      const btn = e.target.closest('.hca');
+      const id = btn ? btn.dataset.id : card.dataset.id;
+      const h = findHost(id); if (!h) return;
+      if (btn && btn.classList.contains('ssh'))  { openTerminal(h); }
+      else if (btn && btn.classList.contains('sftp')) { openSftp(h); }
+      else { showEditor(h); }
+    });
+  });
+}
+$('#cardsSearch').addEventListener('input', renderCards);
+
+// ── Side panel editor ──
+let spEditId = null, saveTimer = null;
+
+function openPanel(h) {
+  spEditId = h.id;
+  selectedId = h.id;
+  const isNew = !HOSTS.some(x => x.id === h.id);
+  if (isNew) HOSTS.push(h);
+  $('#spTitle').textContent = h.label || h.hostname || 'Host baru';
+  $('#spSaved').classList.remove('show');
+  $('#spBody').innerHTML = `
+    <div class="g2">
+      <div class="g"><label>Label</label><input id="f_label" value="${esc(h.label)}"></div>
+      <div class="g"><label>Group</label><input id="f_group" value="${esc(h.group)}"></div>
+    </div>
+    <div class="g2">
+      <div class="g"><label>Hostname / IP</label><input id="f_hostname" value="${esc(h.hostname)}"></div>
+      <div class="g"><label>User</label><input id="f_user" value="${esc(h.user)}"></div>
+    </div>
+    <div class="g2">
+      <div class="g"><label>Port</label><input id="f_port" value="${esc(h.port)}" placeholder="22"></div>
+      <div class="g"><label>Identity file</label><input id="f_identity_file" value="${esc(h.identity_file)}" placeholder="~/.ssh/id_ed25519"></div>
+    </div>
+    <div class="g"><label>Password (auto-type)</label>
+      <div class="pwrow">
+        <input id="f_password" type="password" value="${esc(h.password)}">
+        <button class="mini" id="pwTog">show</button>
+      </div>
+    </div>
+    <div class="g"><label>ProxyCommand</label><input id="f_proxy_command" value="${esc(h.proxy_command)}"></div>
+    <div class="g"><label>Catatan</label><textarea id="f_notes">${esc(h.notes)}</textarea></div>`;
+  $('#spFoot').innerHTML = `
+    <button class="btn green" id="spSSH">SSH</button>
+    <button class="btn orange" id="spSFTP">SFTP</button>
+    <button class="btn red" id="spDel">Hapus</button>`;
+
+  $('#pwTog').onclick = () => {
+    const i = $('#f_password'); i.type = i.type === 'password' ? 'text' : 'password';
+    $('#pwTog').textContent = i.type === 'password' ? 'show' : 'hide';
+  };
+  $('#spSSH').onclick  = () => { flushSave(); const d = findHost(spEditId); if (d) openTerminal(d); };
+  $('#spSFTP').onclick = () => { flushSave(); const d = findHost(spEditId); if (d) openSftp(d); };
+  $('#spDel').onclick  = async () => {
+    HOSTS = HOSTS.filter(x => x.id !== spEditId); spEditId = null;
+    await persist(); closePanel(); renderCards(); renderTabs(); toast('Host dihapus');
+  };
+  $('#spBody').querySelectorAll('input,textarea').forEach(el =>
+    el.addEventListener('input', scheduleAutoSave));
+
+  $('#sidePanel').classList.add('open');
+  $('#spBg').classList.add('open');
+}
+function closePanel() {
+  flushSave();
+  $('#sidePanel').classList.remove('open');
+  $('#spBg').classList.remove('open');
+  spEditId = null;
+}
+function collect(id) {
+  const g = k => { const el = $('#f_' + k); return el ? el.value : ''; };
+  return { id, label:g('label'), group:g('group'), hostname:g('hostname'), user:g('user'), port:g('port'), identity_file:g('identity_file'), password:g('password'), proxy_command:g('proxy_command'), notes:g('notes') };
+}
+function scheduleAutoSave() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(doAutoSave, 800);
+}
+async function doAutoSave() {
+  if (!spEditId) return;
+  const d = collect(spEditId);
+  const i = HOSTS.findIndex(h => h.id === spEditId);
+  if (i >= 0) HOSTS[i] = d; else HOSTS.push(d);
+  await persist(); renderCards();
+  $('#spTitle').textContent = d.label || d.hostname || 'Host baru';
+  const badge = $('#spSaved'); badge.classList.add('show');
+  setTimeout(() => badge.classList.remove('show'), 1600);
+}
+function flushSave() {
+  if (!spEditId) return;
+  clearTimeout(saveTimer);
+  const d = collect(spEditId);
+  const i = HOSTS.findIndex(h => h.id === spEditId);
+  if (i >= 0) HOSTS[i] = d; else HOSTS.push(d);
+  persist(); renderCards();
+}
+function showEditor(h) { openPanel(h); }
+$('#spClose').onclick = closePanel;
+$('#spBg').onclick    = closePanel;
+function findHost(id) { return HOSTS.find(h => h.id === id); }
+
+// ── Launcher ──
+let lnOpen = false, lnSel = 0;
+function openLauncher() {
+  lnOpen = true; $('#lnBg').classList.remove('hidden');
+  $('#lnQ').value = ''; lnSel = 0; renderLauncher();
+  setTimeout(() => $('#lnQ').focus(), 10);
+}
+function closeLauncher() { lnOpen = false; $('#lnBg').classList.add('hidden'); }
+
+function lnFiltered() {
+  const q = ($('#lnQ').value || '').toLowerCase();
+  return HOSTS.filter(h => [h.label, h.hostname, h.user, h.group].some(x => (x||'').toLowerCase().includes(q)));
+}
+function lnFlat() {
+  const f = lnFiltered(); const groups = {};
+  f.forEach(h => { const g = h.group||'lainnya'; (groups[g]=groups[g]||[]).push(h); });
+  const flat = [];
+  Object.keys(groups).sort().forEach(g =>
+    groups[g].sort((a,b) => (a.label||a.hostname).localeCompare(b.label||b.hostname)).forEach(h => flat.push(h)));
+  return flat;
+}
+function renderLauncher() {
+  const f = lnFiltered(); const groups = {};
+  f.forEach(h => { const g = h.group||'lainnya'; (groups[g]=groups[g]||[]).push(h); });
+  let html = '', idx = 0;
+  Object.keys(groups).sort().forEach(g => {
+    html += `<div class="ln-grp">${esc(g)}</div>`;
+    groups[g].sort((a,b) => (a.label||a.hostname).localeCompare(b.label||b.hostname)).forEach(h => {
+      html += `<div class="ln-item${idx===lnSel?' sel':''}" data-idx="${idx}" data-id="${esc(h.id)}">
+        <div class="li-inf">
+          <div class="li-name">${esc(h.label||h.hostname)}</div>
+          <div class="li-addr">${esc(h.user?h.user+'@':'')}${esc(h.hostname)}${h.port?':'+esc(h.port):''}</div>
+        </div>
+        <div class="li-acts">
+          <button class="lact lact-ssh" data-id="${esc(h.id)}">SSH</button>
+          <button class="lact lact-sftp" data-id="${esc(h.id)}">SFTP</button>
+        </div>
+      </div>`;
+      idx++;
+    });
+  });
+  if (!f.length) html = `<div style="padding:24px;color:var(--muted);text-align:center">Tidak ditemukan</div>`;
+  $('#lnResults').innerHTML = html;
+  $('#lnResults').querySelectorAll('.ln-item').forEach(it => {
+    it.addEventListener('click', e => {
+      if (e.target.closest('.lact-ssh'))  { const h=findHost(e.target.dataset.id); if(h){closeLauncher();openTerminal(h);} return; }
+      if (e.target.closest('.lact-sftp')) { const h=findHost(e.target.dataset.id); if(h){closeLauncher();openSftp(h);} return; }
+      const h = findHost(it.dataset.id); if(h){closeLauncher();switchTab('home');openPanel(h);}
+    });
+  });
+}
+$('#lnQ').addEventListener('input', () => { lnSel=0; renderLauncher(); });
+$('#lnQ').addEventListener('keydown', e => {
+  const flat = lnFlat();
+  if (e.key === 'ArrowDown') { e.preventDefault(); lnSel = Math.min(lnSel+1, flat.length-1); renderLauncher(); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); lnSel = Math.max(lnSel-1, 0); renderLauncher(); }
+  else if (e.key === 'Enter') {
+    e.preventDefault(); const h = flat[lnSel]; if (!h) return;
+    if (e.ctrlKey && e.shiftKey) { closeLauncher(); openSftp(h); }
+    else if (e.ctrlKey)          { closeLauncher(); openTerminal(h); }
+    else                          { closeLauncher(); switchTab('home'); openPanel(h); }
+  }
+  else if (e.key === 'Escape') closeLauncher();
+});
+$('#lnBg').addEventListener('click', e => { if (e.target === $('#lnBg')) closeLauncher(); });
+$('#btnLauncher').onclick = openLauncher;
+
+// ── Tabs ──
+const TABS = [{ id:'home', title:'Hosts', type:'home' }];
+let activeTab = 'home';
+const SESS = {};
+const SFTP_STATE = {};
+
+function renderTabs() {
+  const bar = $('#tabbar'); bar.innerHTML = '';
+  TABS.forEach(t => {
+    const el = document.createElement('div');
+    el.className = 'tab' + (t.id === activeTab ? ' active' : '') +
+      (t.type === 'term' && SESS[t.id] && !SESS[t.id].alive ? ' dead' : '');
+    if (t.type === 'home') {
+      el.innerHTML = `<span class="ttl">Hosts</span>`;
+    } else if (t.type === 'term') {
+      el.innerHTML = `<span class="dot"></span><span class="ttl">${esc(t.title)}</span><button class="tx">&#215;</button>`;
+    } else if (t.type === 'sftp') {
+      el.innerHTML = `<span class="ttl">SFTP: ${esc(t.title)}</span><button class="tx">&#215;</button>`;
+    }
+    el.onclick = () => {
+      if (gridMode && t.type === 'term') { /* focus that pane */ activeTab=t.id; renderTabs(); return; }
+      switchTab(t.id);
+    };
+    const x = el.querySelector('.tx');
+    if (x) x.onclick = ev => {
+      ev.stopPropagation();
+      if (t.type === 'term') closeTerminal(t.id);
+      else if (t.type === 'sftp') closeSftp(t.id);
+    };
+    bar.appendChild(el);
+  });
+}
+
+function switchTab(id) {
+  if (gridMode) exitGridMode();
+  activeTab = id;
+  $('#homePane').style.display = id === 'home' ? '' : 'none';
+  Object.values(SESS).forEach(s => s.div.style.display = (s.div.dataset.id === id) ? '' : 'none');
+  Object.values(SFTP_STATE).forEach(s => s.div.style.display = (s.div.dataset.id === id) ? '' : 'none');
+  renderTabs();
+  const s = SESS[id];
+  if (s) setTimeout(() => { try { s.fit.fit(); s.term.focus(); invoke('pty_resize',{sessionId:id,rows:s.term.rows,cols:s.term.cols}); } catch(_){} }, 0);
+}
+
+// ── Grid mode ──
+let gridMode = false;
+
+$('#btnGrid').onclick = toggleGrid;
+
+function toggleGrid() {
+  const terms = Object.keys(SESS);
+  if (!terms.length) { toast('Buka terminal SSH dulu untuk grid view'); return; }
+  gridMode ? exitGridMode() : enterGridMode();
+}
+
+function enterGridMode() {
+  gridMode = true;
+  $('#btnGrid').classList.add('active');
+  const stack = $('#stack');
+  // hide non-terminal panes
+  $('#homePane').style.display = 'none';
+  Object.values(SFTP_STATE).forEach(s => s.div.style.display = 'none');
+  // show & position all terminals
+  const terms = Object.entries(SESS);
+  const W = stack.clientWidth, H = stack.clientHeight;
+  tileTerminals(terms, W, H);
+  terms.forEach(([id, s]) => {
+    s.div.style.display = '';
+    s.div.classList.add('grid-item');
+    // label (drag handle)
+    const lbl = s.div.querySelector('.term-label');
+    if (lbl) { lbl.style.display = 'flex'; lbl.style.cursor = 'move'; }
+    // resize corner handle
+    if (!s.div.querySelector('.resize-corner')) {
+      const rc = document.createElement('div');
+      rc.className = 'resize-corner';
+      s.div.appendChild(rc);
+    }
+  });
+  initGridInteract();
+  renderTabs();
+  setTimeout(refitAll, 120);
+}
+
+function exitGridMode() {
+  gridMode = false;
+  $('#btnGrid').classList.remove('active');
+  // destroy interact instances
+  try { interact('.grid-item').unset(); } catch(_) {}
+  // clean up grid-item state
+  Object.values(SESS).forEach(s => {
+    s.div.classList.remove('grid-item');
+    s.div.style.left = '';
+    s.div.style.top = '';
+    s.div.style.width = '';
+    s.div.style.height = '';
+    s.div.style.display = 'none';
+    const rc = s.div.querySelector('.resize-corner');
+    if (rc) rc.remove();
+  });
+  // restore normal tab view
+  switchTab(activeTab in SESS ? activeTab : (TABS.find(t=>t.type!=='sftp')||TABS[0]).id);
+}
+
+function tileTerminals(terms, W, H) {
+  const n = terms.length;
+  if (!n) return;
+  const gap = 4;
+  const cols = Math.ceil(Math.sqrt(n));
+  const rows = Math.ceil(n / cols);
+  const w = Math.floor((W - gap * (cols + 1)) / cols);
+  const h = Math.floor((H - gap * (rows + 1)) / rows);
+  terms.forEach(([id, s], i) => {
+    const col = i % cols, row = Math.floor(i / cols);
+    const x = gap + col * (w + gap);
+    const y = gap + row * (h + gap);
+    s.div.style.left   = x + 'px';
+    s.div.style.top    = y + 'px';
+    s.div.style.width  = w + 'px';
+    s.div.style.height = h + 'px';
+  });
+}
+
+function initGridInteract() {
+  if (typeof interact === 'undefined') return;
+  interact('.grid-item')
+    .draggable({
+      allowFrom: '.term-label',
+      inertia: false,
+      modifiers: [ interact.modifiers.restrictRect({ restriction: '#stack', endOnly: false }) ],
+      listeners: {
+        move(e) {
+          const t = e.target;
+          const x = (parseFloat(t.style.left) || 0) + e.dx;
+          const y = (parseFloat(t.style.top)  || 0) + e.dy;
+          t.style.left = x + 'px';
+          t.style.top  = y + 'px';
+        }
+      }
+    })
+    .resizable({
+      edges: { right: true, bottom: true, bottomRight: '.resize-corner' },
+      modifiers: [ interact.modifiers.restrictSize({ minWidth: 220, minHeight: 130 }) ],
+      listeners: {
+        move(e) {
+          const t = e.target;
+          const pRect = t.parentElement.getBoundingClientRect();
+          t.style.width  = e.rect.width  + 'px';
+          t.style.height = e.rect.height + 'px';
+          t.style.left   = (e.rect.left  - pRect.left) + 'px';
+          t.style.top    = (e.rect.top   - pRect.top)  + 'px';
+          const id = t.dataset.id;
+          const s = SESS[id];
+          if (s) try { s.fit.fit(); } catch(_) {}
+        },
+        end(e) {
+          const id = e.target.dataset.id;
+          const s = SESS[id];
+          if (s) {
+            try { s.fit.fit(); invoke('pty_resize',{sessionId:id,rows:s.term.rows,cols:s.term.cols}); } catch(_) {}
+          }
+        }
+      }
+    });
+}
+
+function refitAll() {
+  Object.entries(SESS).forEach(([id, s]) => {
+    try { s.fit.fit(); invoke('pty_resize',{sessionId:id,rows:s.term.rows,cols:s.term.cols}); } catch(_) {}
+  });
+}
+
+// ── Terminal ──
+function openTerminal(host) {
+  if (!host.hostname) { toast('Host tidak punya alamat'); return; }
+  const id = 'sess-' + Math.random().toString(36).slice(2, 10);
+  const title = (host.label || host.hostname).slice(0, 24);
+
+  const div = document.createElement('div');
+  div.className = 'pane term'; div.dataset.id = id;
+
+  // label / drag handle
+  const lbl = document.createElement('div');
+  lbl.className = 'term-label';
+  lbl.innerHTML = `<span class="tl-dot"></span><span class="tl-name">${esc(title)}</span><button class="tl-close" title="Tutup">&#215;</button>`;
+  lbl.querySelector('.tl-close').onclick = () => closeTerminal(id);
+  div.appendChild(lbl);
+
+  const inner = document.createElement('div');
+  inner.className = 'termhost';
+  div.appendChild(inner);
+
+  $('#stack').appendChild(div);
+
+  const term = new Terminal({
+    fontFamily: "Consolas,'Cascadia Mono','JetBrains Mono',monospace",
+    fontSize: 13, cursorBlink: true, allowTransparency: false,
+    theme: { background:'#090c10', foreground:'#dce6f5', cursor:'#4f8ef7', selectionBackground:'#2a6de0' }
+  });
+  const fit = new FitAddon.FitAddon();
+  term.loadAddon(fit); term.open(inner);
+  SESS[id] = { term, fit, div, alive: true };
+  TABS.push({ id, title, type:'term' });
+
+  if (gridMode) {
+    // add to grid
+    const stack = $('#stack');
+    const W = stack.clientWidth, H = stack.clientHeight;
+    const terms = Object.entries(SESS);
+    tileTerminals(terms, W, H);
+    terms.forEach(([sid, s]) => {
+      s.div.style.display = '';
+      if (!s.div.classList.contains('grid-item')) {
+        s.div.classList.add('grid-item');
+        if (!s.div.querySelector('.resize-corner')) {
+          const rc = document.createElement('div'); rc.className = 'resize-corner';
+          s.div.appendChild(rc);
+        }
+      }
+    });
+    try { interact('.grid-item').unset(); } catch(_) {}
+    initGridInteract();
+    activeTab = id; renderTabs();
+    setTimeout(refitAll, 120);
+  } else {
+    switchTab(id);
+  }
+  fit.fit();
+
+  invoke('pty_open', { sessionId:id, host, rows:term.rows, cols:term.cols })
+    .catch(e => { term.write('\r\n\x1b[31mGagal: ' + e + '\x1b[0m\r\n'); SESS[id].alive = false; renderTabs(); });
+  term.onData(d => invoke('pty_input', { sessionId:id, data:d }).catch(() => {}));
+}
+
+function closeTerminal(id) {
+  const s = SESS[id]; if (!s) return;
+  invoke('pty_close', { sessionId:id }).catch(() => {});
+  try { s.term.dispose(); } catch(_) {}
+  s.div.remove(); delete SESS[id];
+  const i = TABS.findIndex(t => t.id === id); if (i >= 0) TABS.splice(i, 1);
+  if (gridMode) {
+    const remaining = Object.keys(SESS);
+    if (!remaining.length) { exitGridMode(); return; }
+    const stack = $('#stack');
+    const W = stack.clientWidth, H = stack.clientHeight;
+    tileTerminals(Object.entries(SESS), W, H);
+    try { interact('.grid-item').unset(); } catch(_) {}
+    initGridInteract();
+    renderTabs(); setTimeout(refitAll, 80);
+  } else {
+    if (activeTab === id) switchTab(TABS.length ? TABS[TABS.length-1].id : 'home');
+    else renderTabs();
+  }
+}
+
+function b64ToBytes(b64) {
+  const bin = atob(b64); const u = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+  return u;
+}
+listen('pty-output', e => { const s = SESS[e.payload.id]; if (s) s.term.write(b64ToBytes(e.payload.data)); });
+listen('pty-exit',   e => {
+  const s = SESS[e.payload.id]; if (!s) return;
+  s.alive = false;
+  s.term.write('\r\n\x1b[90m[sesi berakhir]\x1b[0m\r\n');
+  const lbl = s.div.querySelector('.term-label');
+  if (lbl) lbl.classList.add('dead');
+  renderTabs();
+});
+
+// ── SFTP ──
+function openSftp(host) {
+  if (!host.hostname) { toast('Host tidak punya alamat'); return; }
+  const id    = 'sftp-' + Math.random().toString(36).slice(2, 10);
+  const title = (host.label || host.hostname).slice(0, 20);
+  const div   = document.createElement('div');
+  div.className = 'pane'; div.dataset.id = id;
+  div.innerHTML = `
+  <div class="sftp-wrap">
+    <div class="sftp-side" data-side="local">
+      <div class="sftp-hdr">
+        <span class="sftp-lbl">Local</span>
+        <input class="sftp-path" value="" placeholder="C:\\Users\\..."/>
+        <button class="sact sftp-up">Up</button>
+        <button class="sact sftp-ref">Ref</button>
+      </div>
+      <div class="sftp-files"></div>
+      <div class="sftp-bar">
+        <button class="sact sftp-ul">Upload ›</button>
+        <span class="sftp-st" data-side="local">Siap</span>
+      </div>
+    </div>
+    <div class="sftp-side" data-side="remote">
+      <div class="sftp-hdr">
+        <span class="sftp-lbl">Remote</span>
+        <input class="sftp-path" value="" placeholder="/home/..."/>
+        <button class="sact sftp-up">Up</button>
+        <button class="sact sftp-ref">Ref</button>
+      </div>
+      <div class="sftp-files"></div>
+      <div class="sftp-bar">
+        <button class="sact sftp-dl">‹ Download</button>
+        <span class="sftp-st" data-side="remote">Siap</span>
+      </div>
+    </div>
+  </div>`;
+  $('#stack').appendChild(div);
+  const remoteHome = host.user ? '/home/' + host.user : '~';
+  const state = { div, host, localPath:'', remotePath:remoteHome, localSel:null, remoteSel:null };
+  SFTP_STATE[id] = state;
+  TABS.push({ id, title, type:'sftp' });
+  switchTab(id);
+
+  const wrap = div.querySelector('.sftp-wrap');
+  wrap.querySelectorAll('.sftp-side').forEach(side => {
+    const isLocal = side.dataset.side === 'local';
+    side.querySelector('.sftp-up').onclick = () => {
+      if (isLocal) {
+        const cur = state.localPath;
+        if (!cur || cur === 'drives') return;
+        const parent = cur.replace(/\\[^\\]+\\?$/, '');
+        state.localPath = (parent === cur || parent.length < 3) ? 'drives' : parent;
+        loadLocal(id);
+      } else {
+        const cur = state.remotePath;
+        if (!cur || cur === '/') { state.remotePath = '/'; loadRemote(id); return; }
+        const parts = cur.split('/').filter(Boolean); parts.pop();
+        state.remotePath = '/' + parts.join('/');
+        loadRemote(id);
+      }
+    };
+    side.querySelector('.sftp-ref').onclick = () => isLocal ? loadLocal(id) : loadRemote(id);
+    side.querySelector('.sftp-path').addEventListener('keydown', e => {
+      if (e.key !== 'Enter') return;
+      if (isLocal) { state.localPath = e.target.value; loadLocal(id); }
+      else         { state.remotePath = e.target.value; loadRemote(id); }
+    });
+  });
+  wrap.querySelector('.sftp-ul').onclick = () => doUpload(id);
+  wrap.querySelector('.sftp-dl').onclick = () => doDownload(id);
+  loadLocal(id); loadRemote(id);
+}
+
+function closeSftp(id) {
+  const s = SFTP_STATE[id]; if (!s) return;
+  s.div.remove(); delete SFTP_STATE[id];
+  const i = TABS.findIndex(t => t.id === id); if (i >= 0) TABS.splice(i, 1);
+  if (activeTab === id) switchTab(TABS.length ? TABS[TABS.length-1].id : 'home');
+  else renderTabs();
+}
+
+async function loadLocal(id) {
+  const s = SFTP_STATE[id]; if (!s) return;
+  const side = s.div.querySelector('[data-side="local"]');
+  const filesEl = side.querySelector('.sftp-files');
+  filesEl.innerHTML = '<div class="sftp-load"><div class="sftp-spin"></div>Memuat...</div>';
+  try {
+    const [abs, entries] = await invoke('sftp_list_local', { path: s.localPath });
+    s.localPath = abs; side.querySelector('.sftp-path').value = abs;
+    s.localSel = null; renderFileList(filesEl, entries, 'local', id);
+  } catch(e) { filesEl.innerHTML = `<div class="sftp-load" style="color:var(--danger)">${esc(String(e))}</div>`; }
+}
+async function loadRemote(id) {
+  const s = SFTP_STATE[id]; if (!s) return;
+  const side = s.div.querySelector('[data-side="remote"]');
+  const filesEl = side.querySelector('.sftp-files');
+  filesEl.innerHTML = '<div class="sftp-load"><div class="sftp-spin"></div>Menghubungkan SSH...</div>';
+  setSftpSt(id, 'remote', 'Connecting...');
+  try {
+    const [abs, entries] = await invoke('sftp_list_remote', { host: s.host, path: s.remotePath });
+    s.remotePath = abs; side.querySelector('.sftp-path').value = abs;
+    s.remoteSel = null; renderFileList(filesEl, entries, 'remote', id);
+    setSftpSt(id, 'remote', 'Siap');
+  } catch(e) {
+    filesEl.innerHTML = `<div class="sftp-load" style="color:var(--danger)">${esc(String(e))}</div>`;
+    setSftpSt(id, 'remote', 'Error: ' + e);
+  }
+}
+function renderFileList(el, entries, side, sftpId) {
+  el.innerHTML = '';
+  if (!entries.length) { el.innerHTML = '<div class="sftp-load">Kosong</div>'; return; }
+  entries.forEach(f => {
+    const row = document.createElement('div'); row.className = 'sftp-row';
+    row.innerHTML = `<span class="ico">${f.is_dir ? '📁' : '📄'}</span><span class="fn">${esc(f.name)}</span><span class="fs">${esc(f.size)}</span>`;
+    row.addEventListener('click', () => {
+      el.querySelectorAll('.sftp-row.selected').forEach(r => r.classList.remove('selected'));
+      row.classList.add('selected');
+      const s = SFTP_STATE[sftpId];
+      if (side === 'local') s.localSel = f; else s.remoteSel = f;
+    });
+    row.addEventListener('dblclick', () => {
+      if (!f.is_dir) return;
+      const s = SFTP_STATE[sftpId];
+      if (side === 'local') {
+        s.localPath = s.localPath ? (s.localPath.replace(/\\$/, '') + '\\' + f.name) : f.name;
+        loadLocal(sftpId);
+      } else {
+        s.remotePath = (s.remotePath === '/' ? '/' : s.remotePath + '/') + f.name;
+        loadRemote(sftpId);
+      }
+    });
+    el.appendChild(row);
+  });
+}
+async function doUpload(id) {
+  const s = SFTP_STATE[id]; if (!s) return;
+  if (!s.localSel) { toast('Pilih file/folder lokal dulu'); return; }
+  const localFull  = s.localPath + '\\' + s.localSel.name;
+  const remoteDest = s.remotePath === '/' ? '/' + s.localSel.name : s.remotePath + '/' + s.localSel.name;
+  setSftpSt(id, 'local', 'Mengupload ' + s.localSel.name + '...');
+  try {
+    await invoke('sftp_upload', { host: s.host, localPath: localFull, remotePath: remoteDest });
+    setSftpSt(id, 'local', 'Upload selesai: ' + s.localSel.name);
+    toast('Upload selesai'); loadRemote(id);
+  } catch(e) { setSftpSt(id, 'local', 'Gagal: ' + e); toast('Upload gagal'); }
+}
+async function doDownload(id) {
+  const s = SFTP_STATE[id]; if (!s) return;
+  if (!s.remoteSel) { toast('Pilih file/folder remote dulu'); return; }
+  const remoteFull = (s.remotePath === '/' ? '/' : s.remotePath + '/') + s.remoteSel.name;
+  const localDest  = s.localPath + '\\' + s.remoteSel.name;
+  setSftpSt(id, 'remote', 'Mendownload ' + s.remoteSel.name + '...');
+  try {
+    await invoke('sftp_download', { host: s.host, remotePath: remoteFull, localPath: localDest });
+    setSftpSt(id, 'remote', 'Download selesai: ' + s.remoteSel.name);
+    toast('Download selesai'); loadLocal(id);
+  } catch(e) { setSftpSt(id, 'remote', 'Gagal: ' + e); toast('Download gagal'); }
+}
+function setSftpSt(id, side, msg) {
+  const s = SFTP_STATE[id]; if (!s) return;
+  const el = s.div.querySelector(`.sftp-st[data-side="${side}"]`);
+  if (el) el.textContent = msg;
+}
+
+// ── Global events ──
+window.addEventListener('resize', () => {
+  if (gridMode) { refitAll(); return; }
+  const s = SESS[activeTab];
+  if (s) try { s.fit.fit(); invoke('pty_resize',{sessionId:activeTab,rows:s.term.rows,cols:s.term.cols}); } catch(_) {}
+});
+document.addEventListener('keydown', e => {
+  const inApp = !$('#app').classList.contains('hidden');
+  if (!inApp) return;
+  if (e.ctrlKey && e.key === 'k') { e.preventDefault(); lnOpen ? closeLauncher() : openLauncher(); }
+  if (e.ctrlKey && e.key === 'g') { e.preventDefault(); toggleGrid(); }
+  if (e.key === 'Escape') {
+    if (lnOpen) closeLauncher();
+    else if ($('#sidePanel').classList.contains('open')) closePanel();
+    else if (!$('#restoreModal').classList.contains('hidden')) $('#restoreModal').classList.add('hidden');
+  }
+});
+
+// ── Init ──
+renderTabs();
+initLock();
+</script>
+</body>
+</html>
