@@ -1,6 +1,6 @@
 {
-  "name": "mktr-vault",
-  "version": "0.1.0",
+  "name": "termismus",
+  "version": "1.1.0",
   "private": true,
   "scripts": {
     "tauri": "tauri",

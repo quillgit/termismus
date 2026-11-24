@@ -107,7 +107,7 @@ pnpm tauri dev
 ## Vault Format
 
 ```
-vault.bin = MKTRV1 | salt(16) | nonce(12) | AES-256-GCM( JSON(hosts[]) )
+vault.bin = TRMSV1 | salt(16) | nonce(12) | AES-256-GCM( JSON(hosts[]) )
 ```
 
 Key derivation: `Argon2id(master_password, salt)` → 32-byte key.  
@@ -122,7 +122,7 @@ TMBB01 | salt(16) | nonce(12) | AES-256-GCM( JSON({ hosts, ssh_files }) )
 
 | Data | Path |
 |------|------|
-| Vault | `%APPDATA%\MKTRVault\vault.bin` |
+| Vault | `%APPDATA%\TERMISMUS\vault.bin` |
 | SSH keys (read) | `%USERPROFILE%\.ssh\` |
 | Backup output | User-chosen path via native dialog |
 

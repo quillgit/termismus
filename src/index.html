@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>TERMISMUS</title>
 <link rel="stylesheet" href="vendor/xterm.css">
 <style>
@@ -10,7 +10,7 @@
   --bg:#0d1117; --panel:#141920; --panel2:#1a2030; --line:#232d3f;
   --txt:#dce6f5; --muted:#5d6f8a; --accent:#4f8ef7; --accent2:#2a6de0;
   --danger:#e5484d; --ok:#22c068; --chip:#1a2030; --term:#090c10;
-  --orange:#d08e30; --yellow:#e5c840;
+  --orange:#d08e30; --yellow:#e5c840; --purple:#a371f7;
   --tb-h:40px; --bar-h:44px; --tab-h:33px;
 }
 *{box-sizing:border-box;margin:0;padding:0}
@@ -23,7 +23,7 @@ input,textarea{font-family:inherit}
 ::-webkit-scrollbar-thumb{background:var(--line);border-radius:3px}
 ::-webkit-scrollbar-thumb:hover{background:var(--muted)}
 
-/* ── Titlebar (frameless drag region) ── */
+/* ── Titlebar ── */
 #titlebar{
   position:fixed;top:0;left:0;right:0;height:var(--tb-h);
   display:flex;align-items:center;
@@ -35,6 +35,9 @@ input,textarea{font-family:inherit}
 .tb-logo-txt{font-size:14px;font-weight:800;letter-spacing:.4px;pointer-events:none}
 .tb-logo-txt em{font-style:normal;color:var(--accent)}
 .tb-drag{flex:1;height:100%;-webkit-app-region:drag;app-region:drag}
+.tb-cloud{display:flex;align-items:center;gap:6px;padding:0 10px;flex:none;-webkit-app-region:no-drag;app-region:no-drag;font-size:11px;color:var(--muted)}
+.tb-cloud .dot{width:6px;height:6px;border-radius:50%;flex:none}
+.tb-cloud .dot.on{background:var(--ok)}.tb-cloud .dot.off{background:var(--muted)}
 .wbtn{
   width:46px;height:var(--tb-h);border:none;background:transparent;
   color:var(--muted);display:flex;align-items:center;justify-content:center;
@@ -50,11 +53,10 @@ input,textarea{font-family:inherit}
   position:fixed;top:var(--tb-h);left:0;right:0;height:var(--bar-h);
   display:flex;align-items:center;gap:1px;padding:0 8px;
   background:var(--panel);border-bottom:1px solid var(--line);z-index:900;
+  overflow-x:auto;
 }
 .tsep{width:1px;height:20px;background:var(--line);margin:0 5px;flex:none}
 .tcount{font-size:11px;color:var(--muted);padding:0 6px;flex:none;pointer-events:none}
-
-/* Icon button */
 .ibtn{
   width:34px;height:34px;border:none;border-radius:8px;background:transparent;
   color:var(--muted);display:flex;align-items:center;justify-content:center;
@@ -66,6 +68,7 @@ input,textarea{font-family:inherit}
 .ibtn.ok:hover{background:rgba(34,192,104,.13);color:var(--ok)}
 .ibtn.warn:hover{background:rgba(208,142,48,.13);color:var(--orange)}
 .ibtn.danger:hover{background:rgba(229,72,77,.13);color:var(--danger)}
+.ibtn.purple:hover{background:rgba(163,113,247,.13);color:var(--purple)}
 
 /* Tooltip */
 #tip{
@@ -84,7 +87,7 @@ input,textarea{font-family:inherit}
   padding-top:calc(var(--tb-h) + var(--bar-h));
 }
 .lockcard{
-  width:360px;background:var(--panel);border:1px solid var(--line);
+  width:360px;max-width:90vw;background:var(--panel);border:1px solid var(--line);
   border-radius:16px;padding:32px;box-shadow:0 20px 60px rgba(0,0,0,.6);
 }
 .lk-logo{text-align:center;margin-bottom:6px;font-size:26px;font-weight:800;letter-spacing:.5px}
@@ -107,6 +110,7 @@ input,textarea{font-family:inherit}
 .btn.orange{background:var(--orange);color:#fff}.btn.orange:hover{background:#b87a24}
 .btn.ghost{background:var(--panel2);border:1px solid var(--line);color:var(--txt)}.btn.ghost:hover{border-color:var(--accent)}
 .btn.red{background:transparent;border:1px solid var(--danger);color:var(--danger)}.btn.red:hover{background:rgba(229,72,77,.1)}
+.btn.purple{background:var(--purple);color:#fff}.btn.purple:hover{background:#8957e5}
 .err{color:var(--danger);font-size:12px;min-height:16px;margin-top:6px;text-align:center}
 
 /* ── App layout ── */
@@ -131,11 +135,20 @@ input,textarea{font-family:inherit}
 .tab.active{background:var(--panel);color:var(--txt);border-bottom:2px solid var(--accent)}
 .tab .dot{width:6px;height:6px;border-radius:50%;background:var(--ok);flex:none}
 .tab.dead .dot{background:var(--danger)}
+.tab.local .dot{background:var(--purple)}
 .tab .ttl{overflow:hidden;text-overflow:ellipsis;flex:1}
 .tab .tx{color:var(--muted);border:none;background:none;padding:2px 4px;font-size:13px;border-radius:4px;flex:none}
 .tab .tx:hover{color:var(--danger);background:rgba(229,72,77,.1)}
+.tab-new{display:flex;align-items:stretch;flex:none;border-right:1px solid var(--line)}
+.tab-new button{border:none;background:none;color:var(--muted);cursor:pointer;padding:0 10px;font-size:16px;line-height:1}
+.tab-new button.more{padding:0 7px;font-size:10px;border-left:1px solid var(--line)}
+.tab-new button:hover{color:var(--purple);background:rgba(163,113,247,.1)}
+.shell-menu{position:fixed;z-index:800;min-width:200px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:5px;box-shadow:0 12px 36px rgba(0,0,0,.6)}
+.shell-menu .sm-item{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:7px;color:var(--txt);font-size:12.5px;cursor:pointer}
+.shell-menu .sm-item:hover{background:rgba(163,113,247,.13)}
+.shell-menu .sm-item .def{margin-left:auto;color:var(--muted);font-size:10.5px}
+.shell-menu .sm-empty{padding:8px 10px;color:var(--muted);font-size:12px}
 
-/* Stack */
 .stack{position:relative;flex:1;min-height:0;background:var(--term);overflow:hidden}
 .pane{position:absolute;inset:0}
 .pane.term{overflow:hidden;background:var(--term);display:flex;flex-direction:column}
@@ -146,6 +159,7 @@ input,textarea{font-family:inherit}
 }
 .term-label .tl-dot{width:6px;height:6px;border-radius:50%;background:var(--ok);flex:none}
 .term-label.dead .tl-dot{background:var(--danger)}
+.term-label.local .tl-dot{background:var(--purple)}
 .term-label .tl-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .term-label .tl-close{border:none;background:none;color:var(--muted);font-size:12px;padding:0 3px;border-radius:3px;flex:none}
 .term-label .tl-close:hover{color:var(--danger)}
@@ -171,10 +185,10 @@ input,textarea{font-family:inherit}
 
 /* ── Home / cards ── */
 #homePane{background:var(--bg);overflow-y:auto}
-.cards-bar{display:flex;align-items:center;gap:10px;padding:15px 20px 10px;position:sticky;top:0;background:var(--bg);z-index:5}
+.cards-bar{display:flex;align-items:center;gap:10px;padding:15px 20px 10px;position:sticky;top:0;background:var(--bg);z-index:5;flex-wrap:wrap}
 .cards-bar h2{margin:0;font-size:17px;font-weight:700}
 .cards-search{
-  flex:1;max-width:300px;padding:7px 12px;
+  flex:1;min-width:150px;max-width:300px;padding:7px 12px;
   background:var(--panel2);border:1px solid var(--line);border-radius:8px;
   color:var(--txt);outline:none;font-size:13px;transition:border-color .14s;
 }
@@ -193,7 +207,7 @@ input,textarea{font-family:inherit}
 .hcard:hover{border-color:var(--accent);box-shadow:0 3px 18px rgba(79,142,247,.14);transform:translateY(-1px)}
 .hc-name{font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hc-addr{color:var(--muted);font-size:12px;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.hc-acts{display:flex;gap:5px;margin-top:10px}
+.hc-acts{display:flex;gap:5px;margin-top:10px;flex-wrap:wrap}
 .hca{
   padding:4px 10px;border-radius:6px;font-size:12px;font-weight:500;
   border:1px solid var(--line);background:var(--chip);color:var(--muted);cursor:pointer;
@@ -243,7 +257,7 @@ input,textarea{font-family:inherit}
   display:flex;align-items:flex-start;justify-content:center;padding-top:10vh;
 }
 .launcher{
-  width:560px;max-height:62vh;background:var(--panel);border:1px solid var(--line);
+  width:560px;max-width:92vw;max-height:62vh;background:var(--panel);border:1px solid var(--line);
   border-radius:16px;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,.75);
   display:flex;flex-direction:column;
 }
@@ -265,7 +279,7 @@ input,textarea{font-family:inherit}
   transition:border-color .12s,color .12s;
 }
 .lact:hover{border-color:var(--accent);color:var(--accent)}
-.ln-foot{padding:8px 18px;border-top:1px solid var(--line);color:var(--muted);font-size:11px;display:flex;gap:14px}
+.ln-foot{padding:8px 18px;border-top:1px solid var(--line);color:var(--muted);font-size:11px;display:flex;gap:14px;flex-wrap:wrap}
 .ln-foot kbd{background:var(--bg);padding:1px 5px;border-radius:3px;font-size:10.5px}
 
 /* ── SFTP ── */
@@ -293,13 +307,13 @@ input,textarea{font-family:inherit}
 .sact:hover{border-color:var(--accent);color:var(--accent)}
 
 /* ── Modal ── */
-.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:700;display:flex;align-items:center;justify-content:center}
-.modal-card{width:440px;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:26px;box-shadow:0 20px 56px rgba(0,0,0,.65)}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:700;display:flex;align-items:center;justify-content:center;padding:16px}
+.modal-card{width:440px;max-width:100%;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:26px;box-shadow:0 20px 56px rgba(0,0,0,.65)}
 .modal-card h3{margin:0 0 18px;font-size:17px;font-weight:700}
 .file-pick-row{display:flex;gap:8px}
 .file-pick-row input{flex:1;cursor:default}
 .file-pick-row .btn{flex:none;padding:9px 14px;white-space:nowrap}
-.modal-acts{display:flex;gap:8px;margin-top:18px}
+.modal-acts{display:flex;gap:8px;margin-top:18px;flex-wrap:wrap}
 
 /* ── Toast ── */
 .toast{
@@ -307,9 +321,22 @@ input,textarea{font-family:inherit}
   background:var(--panel2);border:1px solid var(--line);
   padding:10px 18px;border-radius:10px;opacity:0;
   transition:opacity .2s;pointer-events:none;z-index:2000;font-size:13px;
-  box-shadow:0 4px 20px rgba(0,0,0,.5);
+  box-shadow:0 4px 20px rgba(0,0,0,.5);max-width:90vw;text-align:center;
 }
 .toast.show{opacity:1}
+
+/* ── Mobile responsive ── */
+@media(max-width:600px){
+  :root{--tb-h:36px;--bar-h:38px;--tab-h:30px}
+  .cards-grid{grid-template-columns:1fr!important}
+  .sftp-wrap{grid-template-columns:1fr!important}
+  .sftp-side+.sftp-side{border-left:none;border-top:1px solid var(--line)}
+  .g2{grid-template-columns:1fr}
+  .ln-foot{display:none}
+  .wbtn{width:38px}
+  .ibtn{width:30px;height:30px}
+  .ibtn svg{width:13px;height:13px}
+}
 </style>
 </head>
 <body>
@@ -321,13 +348,17 @@ input,textarea{font-family:inherit}
       <rect width="20" height="20" rx="5" fill="#1a2a4a"/>
       <rect x="3" y="5" width="11" height="8" rx="1.5" fill="#4f8ef7" opacity=".9"/>
       <rect x="4" y="6" width="9" height="6" rx="1" fill="#090c10"/>
-      <text x="5.5" y="11" font-size="4.5" fill="#4f8ef7" font-family="Consolas,monospace">›_</text>
+      <text x="5.5" y="11" font-size="4.5" fill="#4f8ef7" font-family="Consolas,monospace">&gt;_</text>
       <path d="M14 10a4 4 0 0 1 0 0" stroke="#22c068" stroke-width="1.5" stroke-linecap="round"/>
       <ellipse cx="16" cy="11" rx="3" ry="2" stroke="#22c068" stroke-width="1" fill="none" opacity=".7"/>
     </svg>
     <span class="tb-logo-txt">TERMI<em>SMUS</em></span>
   </div>
   <div class="tb-drag" data-tauri-drag-region></div>
+  <div class="tb-cloud" id="cloudIndicator">
+    <span class="dot off" id="cloudDot"></span>
+    <span id="cloudLabel">Lokal</span>
+  </div>
   <button class="wbtn" id="winMin" title="Minimize">
     <svg width="10" height="1" viewBox="0 0 10 1"><rect width="10" height="1" fill="currentColor"/></svg>
   </button>
@@ -343,6 +374,11 @@ input,textarea{font-family:inherit}
 <div id="toolbar">
   <span class="tcount" id="count"></span>
   <div class="tsep"></div>
+
+  <!-- Local Terminal -->
+  <button class="ibtn purple" id="btnLocalTerm" data-tip="Local Terminal  Ctrl+T">
+    <svg viewBox="0 0 16 16" fill="currentColor"><path d="M2 3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3zm2 1.5v1L5.5 7 4 8.5v1L6.5 7.5 4 4.5zM7 9h3v1H7V9z"/></svg>
+  </button>
 
   <button class="ibtn" id="btnGrid" data-tip="Grid View  Ctrl+G">
     <svg viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1.2"/><rect x="9" y="1" width="6" height="6" rx="1.2"/><rect x="1" y="9" width="6" height="6" rx="1.2"/><rect x="9" y="9" width="6" height="6" rx="1.2"/></svg>
@@ -368,8 +404,15 @@ input,textarea{font-family:inherit}
     <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4.5 9.5A4 4 0 1 1 12 10M4.5 9.5H3a2 2 0 0 0 0 4h10a2 2 0 0 0 0-4h-1.5"/><path d="M8 6v5m0 0L6 9m2 2 2-2"/></svg>
   </button>
 
-  <button class="ibtn" id="btnRestore" data-tip="Restore from Backup File">
+  <button class="ibtn" id="btnRestore" data-tip="Restore from Backup">
     <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4.5 7.5A4 4 0 1 1 12 8M4.5 7.5H3a2 2 0 0 0 0 4h10a2 2 0 0 0 0-4h-1.5"/><path d="M8 13V9m0 0-2 2m2-2 2 2"/></svg>
+  </button>
+
+  <div class="tsep"></div>
+
+  <!-- Cloud Sync -->
+  <button class="ibtn" id="btnCloud" data-tip="Cloud Sync">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4.5 10A3.5 3.5 0 1 1 11.3 9.5a2.5 2.5 0 0 1-.3 5H5a3 3 0 0 1-.5-5z"/></svg>
   </button>
 
   <div class="tsep"></div>
@@ -433,7 +476,7 @@ input,textarea{font-family:inherit}
     <input class="ln-input" id="lnQ" placeholder="Cari host, IP, atau grup..." autocomplete="off"/>
     <div class="ln-results" id="lnResults"></div>
     <div class="ln-foot">
-      <span><kbd>↑↓</kbd> Nav</span>
+      <span><kbd>&uarr;&darr;</kbd> Nav</span>
       <span><kbd>Enter</kbd> Edit</span>
       <span><kbd>Ctrl+Enter</kbd> SSH</span>
       <span><kbd>Ctrl+Shift+Enter</kbd> SFTP</span>
@@ -465,6 +508,44 @@ input,textarea{font-family:inherit}
   </div>
 </div>
 
+<!-- ── Cloud modal ── -->
+<div id="cloudModal" class="modal-bg hidden">
+  <div class="modal-card">
+    <h3 id="cloudModalTitle">Cloud Sync</h3>
+    <div id="cloudLoggedOut">
+      <div class="f"><label>Server URL</label>
+        <input id="cloudUrl" value="http://localhost:3200" placeholder="https://your-server.com"/>
+        <div style="color:var(--muted);font-size:11px;margin-top:4px">Server non-lokal wajib https://</div>
+      </div>
+      <div class="f"><label>Email</label>
+        <input id="cloudEmail" type="email" placeholder="email@example.com"/>
+      </div>
+      <div class="f"><label>Password</label>
+        <input id="cloudPw" type="password" placeholder="••••••••"/>
+      </div>
+      <div class="modal-acts">
+        <button class="btn primary" id="cloudLoginBtn">Login</button>
+        <button class="btn green" id="cloudRegisterBtn">Register</button>
+        <button class="btn ghost" id="cloudCancelBtn">Batal</button>
+      </div>
+    </div>
+    <div id="cloudLoggedIn" class="hidden">
+      <div style="color:var(--muted);font-size:13px;margin-bottom:16px">
+        Terhubung sebagai <strong id="cloudEmailDisplay"></strong>
+      </div>
+      <div id="cloudHistory" class="hidden" style="max-height:220px;overflow-y:auto;margin-top:12px;font-size:12px"></div>
+      <div class="modal-acts">
+        <button class="btn primary" id="cloudPushBtn">Push Vault</button>
+        <button class="btn green" id="cloudPullBtn">Pull Vault</button>
+        <button class="btn ghost" id="cloudHistoryBtn">History</button>
+        <button class="btn red" id="cloudLogoutBtn">Logout</button>
+        <button class="btn ghost" id="cloudCloseBtn">Tutup</button>
+      </div>
+    </div>
+    <div class="err" id="cloudErr"></div>
+  </div>
+</div>
+
 <div id="tip"></div>
 <div class="toast" id="toast"></div>
 
@@ -481,6 +562,7 @@ let MASTER = null, HOSTS = [], selectedId = null;
 const $ = s => document.querySelector(s);
 const esc = s => String(s??'').replace(/[&<>"']/g, c =>
   ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const IS_MOBILE = /android|iphone|ipad/i.test(navigator.userAgent) || window.innerWidth < 600;
 
 // ── Window controls ──
 $('#winMin').onclick  = () => appWin.minimize();
@@ -526,7 +608,7 @@ async function initLock() {
     $('#pwLabel').textContent = 'Master password';
     $('#lockBtn').textContent = 'Buka';
   } else {
-    $('#lockSub').textContent = 'Vault belum ada — buat master password baru.';
+    $('#lockSub').textContent = 'Vault belum ada \u2014 buat master password baru.';
     $('#pw2Wrap').classList.remove('hidden');
     $('#seedWrap').classList.remove('hidden');
     $('#pwLabel').textContent = 'Password baru';
@@ -546,7 +628,7 @@ async function doLock() {
     if (exists) {
       HOSTS = await invoke('unlock_vault', { master: pw });
     } else {
-      if (pw.length < 4) { err.textContent = 'Minimal 4 karakter.'; return; }
+      if (pw.length < 8) { err.textContent = 'Minimal 8 karakter.'; return; }
       if (pw !== $('#masterPw2').value) { err.textContent = 'Password tidak sama.'; return; }
       HOSTS = await invoke('create_vault', { master: pw, seed: $('#seedChk').checked });
     }
@@ -554,7 +636,8 @@ async function doLock() {
     $('#lock').classList.add('hidden');
     $('#app').classList.remove('hidden');
     renderCards(); renderTabs();
-    toast(`Vault terbuka · ${HOSTS.length} host`);
+    toast(`Vault terbuka \u00b7 ${HOSTS.length} host`);
+    initCloud();
   } catch(e) { err.textContent = String(e); }
 }
 
@@ -580,7 +663,8 @@ $('#btnImport').onclick = async () => {
   toast(added ? `${added} host diimpor` : 'Tidak ada host baru');
 };
 $('#btnLock').onclick = () => {
-  Object.keys(SESS).forEach(closeTerminal);
+  Object.keys(SESS).forEach(closeSshTerminal);
+  Object.keys(LOCAL_SESS).forEach(closeLocalTerminal);
   Object.keys(SFTP_STATE).forEach(closeSftp);
   if (gridMode) exitGridMode();
   MASTER = null; HOSTS = []; selectedId = null;
@@ -589,6 +673,136 @@ $('#btnLock').onclick = () => {
   $('#lock').classList.remove('hidden');
   initLock();
 };
+
+// ── Local Terminal ──
+const LOCAL_SESS = {};
+
+$('#btnLocalTerm').onclick = () => openLocalTerminal();
+
+// profile: optional {name, path, args} from pty_list_shells; omitted = default shell
+async function openLocalTerminal(profile) {
+  if (!profile) { const shells = await getShells(); profile = shells[0] || null; }
+  const id = 'local-' + Math.random().toString(36).slice(2, 10);
+  const div = document.createElement('div');
+  div.className = 'pane term'; div.dataset.id = id;
+
+  const lbl = document.createElement('div');
+  lbl.className = 'term-label local';
+  lbl.innerHTML = `<span class="tl-dot"></span><span class="tl-name">Local</span><button class="tl-close" title="Tutup">&#215;</button>`;
+  lbl.querySelector('.tl-close').onclick = () => closeLocalTerminal(id);
+  div.appendChild(lbl);
+
+  const inner = document.createElement('div');
+  inner.className = 'termhost';
+  div.appendChild(inner);
+  $('#stack').appendChild(div);
+
+  const term = new Terminal({
+    fontFamily: "Consolas,'Cascadia Mono','JetBrains Mono',monospace",
+    fontSize: 13, cursorBlink: true, allowTransparency: false,
+    theme: { background:'#090c10', foreground:'#dce6f5', cursor:'#a371f7', selectionBackground:'#8957e5' }
+  });
+  const fit = new FitAddon.FitAddon();
+  term.loadAddon(fit); term.open(inner);
+  attachTermClipboard(term);
+  LOCAL_SESS[id] = { term, fit, div, alive: true };
+  TABS.push({ id, title: profile ? profile.name : 'Local', type: 'local' });
+  lbl.querySelector('.tl-name').textContent = profile ? profile.name : 'Local';
+
+  if (gridMode) {
+    const stack = $('#stack');
+    const terms = getAllTermEntries();
+    tileTerminals(terms, stack.clientWidth, stack.clientHeight);
+    terms.forEach(([,s]) => {
+      s.div.style.display = '';
+      if (!s.div.classList.contains('grid-item')) {
+        s.div.classList.add('grid-item');
+        if (!s.div.querySelector('.resize-corner')) {
+          const rc = document.createElement('div'); rc.className = 'resize-corner'; s.div.appendChild(rc);
+        }
+      }
+    });
+    try { interact('.grid-item').unset(); } catch(_) {}
+    initGridInteract();
+    activeTab = id; renderTabs();
+    setTimeout(refitAll, 120);
+  } else {
+    switchTab(id);
+  }
+  fit.fit();
+
+  const openArgs = { sessionId: id, rows: term.rows, cols: term.cols };
+  if (profile) { openArgs.shell = profile.path; openArgs.args = profile.args; openArgs.name = profile.name; }
+  invoke('pty_open_local', openArgs)
+    .then(name => {
+      LOCAL_SESS[id].shellName = name;
+      const t = TABS.find(t => t.id === id);
+      if (t) t.title = name;
+      renderTabs();
+    })
+    .catch(e => { term.write('\r\n\x1b[31mGagal: ' + e + '\x1b[0m\r\n'); LOCAL_SESS[id].alive = false; renderTabs(); });
+
+  term.onData(d => invoke('pty_input_local', { sessionId: id, data: d }).catch(() => {}));
+}
+
+// ── Terminal clipboard ──
+// Ctrl+Shift+C / Ctrl+Insert = copy, Ctrl+Shift+V / Shift+Insert = paste,
+// selecting text auto-copies, right-click = copy selection or paste.
+function clipWrite(text) {
+  return invoke('clipboard_write', { text })
+    .catch(() => navigator.clipboard && navigator.clipboard.writeText(text))
+    .catch(() => {});
+}
+function clipRead() {
+  return invoke('clipboard_read')
+    .catch(() => navigator.clipboard ? navigator.clipboard.readText() : '')
+    .catch(() => '');
+}
+function attachTermClipboard(term) {
+  const copySel = () => {
+    const sel = term.getSelection();
+    if (sel) clipWrite(sel);
+    return !!sel;
+  };
+  const paste = async () => {
+    const text = await clipRead();
+    if (text) term.paste(text); // honours bracketed-paste, goes through onData
+    term.focus();
+  };
+
+  term.attachCustomKeyEventHandler(e => {
+    if (e.type !== 'keydown') return true;
+    const k = e.key.toLowerCase();
+    const ctrlShift = e.ctrlKey && e.shiftKey && !e.altKey && !e.metaKey;
+    if (ctrlShift && k === 'c') { e.preventDefault(); copySel(); return false; }
+    if (ctrlShift && k === 'v') { e.preventDefault(); paste(); return false; }
+    if (e.ctrlKey && !e.shiftKey && k === 'insert') { e.preventDefault(); copySel(); return false; }
+    if (e.shiftKey && !e.ctrlKey && k === 'insert') { e.preventDefault(); paste(); return false; }
+    return true;
+  });
+
+  // auto-copy on select (debounced so drag-selecting doesn't spam the clipboard)
+  let selTimer = null;
+  term.onSelectionChange(() => {
+    clearTimeout(selTimer);
+    selTimer = setTimeout(() => { if (term.hasSelection()) copySel(); }, 150);
+  });
+
+  term.element.addEventListener('contextmenu', e => {
+    e.preventDefault();
+    if (term.hasSelection()) { copySel(); term.clearSelection(); toast('Disalin'); }
+    else paste();
+  });
+}
+
+function closeLocalTerminal(id) {
+  const s = LOCAL_SESS[id]; if (!s) return;
+  invoke('pty_close_local', { sessionId: id }).catch(() => {});
+  try { s.term.dispose(); } catch(_) {}
+  s.div.remove(); delete LOCAL_SESS[id];
+  const i = TABS.findIndex(t => t.id === id); if (i >= 0) TABS.splice(i, 1);
+  afterTermClose(id);
+}
 
 // ── Backup ──
 $('#btnBackup').onclick = async () => {
@@ -626,12 +840,117 @@ $('#doRestoreBtn').onclick = async () => {
     MASTER = pw; HOSTS = hosts;
     renderCards(); renderTabs();
     $('#restoreModal').classList.add('hidden');
-    toast(`Restore berhasil · ${hosts.length} host + SSH keys`);
+    toast(`Restore berhasil \u00b7 ${hosts.length} host + SSH keys`);
   } catch(e) { $('#restoreErr').textContent = String(e); }
 };
 $('#cancelRestoreBtn').onclick = () => $('#restoreModal').classList.add('hidden');
 
-// ── Cards (Home) ──
+// ── Cloud Sync ──
+async function initCloud() {
+  try {
+    const email = await invoke('cloud_restore_session');
+    updateCloudUI(email);
+  } catch(_) {}
+}
+function updateCloudUI(email) {
+  if (email) {
+    $('#cloudDot').className = 'dot on';
+    $('#cloudLabel').textContent = email;
+    $('#cloudLoggedOut').classList.add('hidden');
+    $('#cloudLoggedIn').classList.remove('hidden');
+    $('#cloudEmailDisplay').textContent = email;
+    $('#cloudModalTitle').textContent = 'Cloud Sync';
+  } else {
+    $('#cloudDot').className = 'dot off';
+    $('#cloudLabel').textContent = 'Lokal';
+    $('#cloudLoggedOut').classList.remove('hidden');
+    $('#cloudLoggedIn').classList.add('hidden');
+    $('#cloudModalTitle').textContent = 'Cloud Login';
+  }
+}
+
+$('#btnCloud').onclick = () => {
+  $('#cloudErr').textContent = '';
+  $('#cloudModal').classList.remove('hidden');
+};
+$('#cloudCancelBtn').onclick = () => $('#cloudModal').classList.add('hidden');
+$('#cloudCloseBtn').onclick  = () => $('#cloudModal').classList.add('hidden');
+
+$('#cloudLoginBtn').onclick = async () => {
+  $('#cloudErr').textContent = '';
+  try {
+    const email = await invoke('cloud_login', {
+      serverUrl: $('#cloudUrl').value,
+      email: $('#cloudEmail').value,
+      password: $('#cloudPw').value
+    });
+    updateCloudUI(email);
+    toast('Cloud connected: ' + email);
+  } catch(e) { $('#cloudErr').textContent = String(e); }
+};
+
+$('#cloudRegisterBtn').onclick = async () => {
+  $('#cloudErr').textContent = '';
+  try {
+    const email = await invoke('cloud_register', {
+      serverUrl: $('#cloudUrl').value,
+      email: $('#cloudEmail').value,
+      password: $('#cloudPw').value
+    });
+    updateCloudUI(email);
+    toast('Registered & connected: ' + email);
+  } catch(e) { $('#cloudErr').textContent = String(e); }
+};
+
+$('#cloudPushBtn').onclick = async () => {
+  $('#cloudErr').textContent = '';
+  try {
+    const name = (navigator.userAgent.includes('Windows') ? 'Windows' : 'Mobile') + ' ' + new Date().toLocaleDateString();
+    const msg = await invoke('cloud_push', { deviceName: name });
+    toast(msg);
+  } catch(e) { $('#cloudErr').textContent = String(e); }
+};
+
+$('#cloudPullBtn').onclick = async () => {
+  $('#cloudErr').textContent = '';
+  try {
+    const res = await invoke('cloud_pull', { master: MASTER });
+    HOSTS = res.hosts;
+    renderCards(); renderTabs();
+    toast(res.message + (res.backup_path ? ' · backup lokal dibuat' : ''));
+  } catch(e) { $('#cloudErr').textContent = String(e); }
+};
+
+$('#cloudHistoryBtn').onclick = async () => {
+  $('#cloudErr').textContent = '';
+  try {
+    const versions = await invoke('cloud_history');
+    const box = $('#cloudHistory');
+    if (!versions.length) { box.classList.add('hidden'); toast('Belum ada versi di cloud'); return; }
+    box.innerHTML = versions.slice(0, 20).map(v =>
+      `<div style="padding:3px 0;border-bottom:1px solid var(--border,#333)">v${esc(String(v.version))} · ${esc(v.device_name)} · ${esc(v.created_at)} · ${esc(fmtBytes(v.blob_size))}</div>`
+    ).join('');
+    box.classList.remove('hidden');
+    toast(`${versions.length} versi di cloud`);
+  } catch(e) { $('#cloudErr').textContent = String(e); }
+};
+
+function fmtBytes(n) {
+  n = Number(n) || 0;
+  if (n < 1024) return n + ' B';
+  if (n < 1048576) return (n / 1024).toFixed(1) + ' KB';
+  return (n / 1048576).toFixed(1) + ' MB';
+}
+
+$('#cloudLogoutBtn').onclick = async () => {
+  await invoke('cloud_logout');
+  $('#cloudHistory').classList.add('hidden');
+  updateCloudUI(null);
+  toast('Disconnected from cloud');
+  $('#cloudModal').classList.add('hidden');
+};
+
+// ── Cards ──
 function renderCards() {
   const q = ($('#cardsSearch').value || '').toLowerCase();
   const f = HOSTS.filter(h => [h.label, h.hostname, h.user, h.group].some(x => (x||'').toLowerCase().includes(q)));
@@ -670,7 +989,7 @@ function renderCards() {
       const btn = e.target.closest('.hca');
       const id = btn ? btn.dataset.id : card.dataset.id;
       const h = findHost(id); if (!h) return;
-      if (btn && btn.classList.contains('ssh'))  { openTerminal(h); }
+      if (btn && btn.classList.contains('ssh'))  { openSshTerminal(h); }
       else if (btn && btn.classList.contains('sftp')) { openSftp(h); }
       else { showEditor(h); }
     });
@@ -678,7 +997,7 @@ function renderCards() {
 }
 $('#cardsSearch').addEventListener('input', renderCards);
 
-// ── Side panel editor ──
+// ── Side panel ──
 let spEditId = null, saveTimer = null;
 
 function openPanel(h) {
@@ -718,7 +1037,7 @@ function openPanel(h) {
     const i = $('#f_password'); i.type = i.type === 'password' ? 'text' : 'password';
     $('#pwTog').textContent = i.type === 'password' ? 'show' : 'hide';
   };
-  $('#spSSH').onclick  = () => { flushSave(); const d = findHost(spEditId); if (d) openTerminal(d); };
+  $('#spSSH').onclick  = () => { flushSave(); const d = findHost(spEditId); if (d) openSshTerminal(d); };
   $('#spSFTP').onclick = () => { flushSave(); const d = findHost(spEditId); if (d) openSftp(d); };
   $('#spDel').onclick  = async () => {
     HOSTS = HOSTS.filter(x => x.id !== spEditId); spEditId = null;
@@ -812,7 +1131,7 @@ function renderLauncher() {
   $('#lnResults').innerHTML = html;
   $('#lnResults').querySelectorAll('.ln-item').forEach(it => {
     it.addEventListener('click', e => {
-      if (e.target.closest('.lact-ssh'))  { const h=findHost(e.target.dataset.id); if(h){closeLauncher();openTerminal(h);} return; }
+      if (e.target.closest('.lact-ssh'))  { const h=findHost(e.target.dataset.id); if(h){closeLauncher();openSshTerminal(h);} return; }
       if (e.target.closest('.lact-sftp')) { const h=findHost(e.target.dataset.id); if(h){closeLauncher();openSftp(h);} return; }
       const h = findHost(it.dataset.id); if(h){closeLauncher();switchTab('home');openPanel(h);}
     });
@@ -826,7 +1145,7 @@ $('#lnQ').addEventListener('keydown', e => {
   else if (e.key === 'Enter') {
     e.preventDefault(); const h = flat[lnSel]; if (!h) return;
     if (e.ctrlKey && e.shiftKey) { closeLauncher(); openSftp(h); }
-    else if (e.ctrlKey)          { closeLauncher(); openTerminal(h); }
+    else if (e.ctrlKey)          { closeLauncher(); openSshTerminal(h); }
     else                          { closeLauncher(); switchTab('home'); openPanel(h); }
   }
   else if (e.key === 'Escape') closeLauncher();
@@ -840,52 +1159,107 @@ let activeTab = 'home';
 const SESS = {};
 const SFTP_STATE = {};
 
+function getAllTermEntries() {
+  return [...Object.entries(SESS), ...Object.entries(LOCAL_SESS)];
+}
+
 function renderTabs() {
   const bar = $('#tabbar'); bar.innerHTML = '';
   TABS.forEach(t => {
     const el = document.createElement('div');
-    el.className = 'tab' + (t.id === activeTab ? ' active' : '') +
-      (t.type === 'term' && SESS[t.id] && !SESS[t.id].alive ? ' dead' : '');
+    let cls = 'tab' + (t.id === activeTab ? ' active' : '');
+    if (t.type === 'term' && SESS[t.id] && !SESS[t.id].alive) cls += ' dead';
+    if (t.type === 'local') cls += ' local';
+    if (t.type === 'local' && LOCAL_SESS[t.id] && !LOCAL_SESS[t.id].alive) cls += ' dead';
+    el.className = cls;
     if (t.type === 'home') {
       el.innerHTML = `<span class="ttl">Hosts</span>`;
     } else if (t.type === 'term') {
+      el.innerHTML = `<span class="dot"></span><span class="ttl">${esc(t.title)}</span><button class="tx">&#215;</button>`;
+    } else if (t.type === 'local') {
       el.innerHTML = `<span class="dot"></span><span class="ttl">${esc(t.title)}</span><button class="tx">&#215;</button>`;
     } else if (t.type === 'sftp') {
       el.innerHTML = `<span class="ttl">SFTP: ${esc(t.title)}</span><button class="tx">&#215;</button>`;
     }
     el.onclick = () => {
-      if (gridMode && t.type === 'term') { /* focus that pane */ activeTab=t.id; renderTabs(); return; }
+      if (gridMode && (t.type === 'term' || t.type === 'local')) { activeTab=t.id; renderTabs(); return; }
       switchTab(t.id);
     };
     const x = el.querySelector('.tx');
     if (x) x.onclick = ev => {
       ev.stopPropagation();
-      if (t.type === 'term') closeTerminal(t.id);
+      if (t.type === 'term') closeSshTerminal(t.id);
+      else if (t.type === 'local') closeLocalTerminal(t.id);
       else if (t.type === 'sftp') closeSftp(t.id);
     };
     bar.appendChild(el);
   });
+  // "+" new local terminal (default shell) and "▾" shell picker
+  const nw = document.createElement('div');
+  nw.className = 'tab-new';
+  nw.innerHTML = `<button class="add" title="Terminal lokal baru (Ctrl+T)">+</button><button class="more" title="Pilih shell">&#9662;</button>`;
+  nw.querySelector('.add').onclick = ev => { ev.stopPropagation(); openLocalTerminal(); };
+  nw.querySelector('.more').onclick = ev => { ev.stopPropagation(); toggleShellMenu(ev.currentTarget); };
+  bar.appendChild(nw);
 }
+
+// ── Shell picker ──
+let SHELLS = null;
+async function getShells() {
+  if (!SHELLS) { try { SHELLS = await invoke('pty_list_shells'); } catch(_) { SHELLS = []; } }
+  return SHELLS;
+}
+function closeShellMenu() { const m = document.querySelector('.shell-menu'); if (m) m.remove(); }
+async function toggleShellMenu(anchor) {
+  if (document.querySelector('.shell-menu')) { closeShellMenu(); return; }
+  const shells = await getShells();
+  const m = document.createElement('div');
+  m.className = 'shell-menu';
+  if (!shells.length) {
+    m.innerHTML = `<div class="sm-empty">Tidak ada shell terdeteksi</div>`;
+  } else {
+    shells.forEach((p, i) => {
+      const it = document.createElement('div');
+      it.className = 'sm-item';
+      it.innerHTML = `<span>${esc(p.name)}</span>${i === 0 ? '<span class="def">default</span>' : ''}`;
+      it.onclick = () => { closeShellMenu(); openLocalTerminal(p); };
+      m.appendChild(it);
+    });
+  }
+  document.body.appendChild(m);
+  const r = anchor.getBoundingClientRect();
+  m.style.top = (r.bottom + 4) + 'px';
+  m.style.left = Math.max(8, Math.min(r.left, window.innerWidth - m.offsetWidth - 8)) + 'px';
+}
+document.addEventListener('click', e => { if (!e.target.closest('.shell-menu')) closeShellMenu(); });
 
 function switchTab(id) {
   if (gridMode) exitGridMode();
   activeTab = id;
   $('#homePane').style.display = id === 'home' ? '' : 'none';
   Object.values(SESS).forEach(s => s.div.style.display = (s.div.dataset.id === id) ? '' : 'none');
+  Object.values(LOCAL_SESS).forEach(s => s.div.style.display = (s.div.dataset.id === id) ? '' : 'none');
   Object.values(SFTP_STATE).forEach(s => s.div.style.display = (s.div.dataset.id === id) ? '' : 'none');
   renderTabs();
-  const s = SESS[id];
-  if (s) setTimeout(() => { try { s.fit.fit(); s.term.focus(); invoke('pty_resize',{sessionId:id,rows:s.term.rows,cols:s.term.cols}); } catch(_){} }, 0);
+  const s = SESS[id] || LOCAL_SESS[id];
+  if (s) setTimeout(() => {
+    try {
+      s.fit.fit();
+      s.term.focus();
+      const isLocal = id in LOCAL_SESS;
+      if (isLocal) invoke('pty_resize_local',{sessionId:id,rows:s.term.rows,cols:s.term.cols});
+      else invoke('ssh_resize',{sessionId:id,rows:s.term.rows,cols:s.term.cols});
+    } catch(_) {}
+  }, 0);
 }
 
 // ── Grid mode ──
 let gridMode = false;
-
 $('#btnGrid').onclick = toggleGrid;
 
 function toggleGrid() {
-  const terms = Object.keys(SESS);
-  if (!terms.length) { toast('Buka terminal SSH dulu untuk grid view'); return; }
+  const terms = getAllTermEntries();
+  if (!terms.length) { toast('Buka terminal dulu untuk grid view'); return; }
   gridMode ? exitGridMode() : enterGridMode();
 }
 
@@ -893,24 +1267,18 @@ function enterGridMode() {
   gridMode = true;
   $('#btnGrid').classList.add('active');
   const stack = $('#stack');
-  // hide non-terminal panes
   $('#homePane').style.display = 'none';
   Object.values(SFTP_STATE).forEach(s => s.div.style.display = 'none');
-  // show & position all terminals
-  const terms = Object.entries(SESS);
+  const terms = getAllTermEntries();
   const W = stack.clientWidth, H = stack.clientHeight;
   tileTerminals(terms, W, H);
   terms.forEach(([id, s]) => {
     s.div.style.display = '';
     s.div.classList.add('grid-item');
-    // label (drag handle)
     const lbl = s.div.querySelector('.term-label');
     if (lbl) { lbl.style.display = 'flex'; lbl.style.cursor = 'move'; }
-    // resize corner handle
     if (!s.div.querySelector('.resize-corner')) {
-      const rc = document.createElement('div');
-      rc.className = 'resize-corner';
-      s.div.appendChild(rc);
+      const rc = document.createElement('div'); rc.className = 'resize-corner'; s.div.appendChild(rc);
     }
   });
   initGridInteract();
@@ -921,38 +1289,30 @@ function enterGridMode() {
 function exitGridMode() {
   gridMode = false;
   $('#btnGrid').classList.remove('active');
-  // destroy interact instances
   try { interact('.grid-item').unset(); } catch(_) {}
-  // clean up grid-item state
-  Object.values(SESS).forEach(s => {
+  getAllTermEntries().forEach(([,s]) => {
     s.div.classList.remove('grid-item');
-    s.div.style.left = '';
-    s.div.style.top = '';
-    s.div.style.width = '';
-    s.div.style.height = '';
+    s.div.style.left = ''; s.div.style.top = ''; s.div.style.width = ''; s.div.style.height = '';
     s.div.style.display = 'none';
     const rc = s.div.querySelector('.resize-corner');
     if (rc) rc.remove();
   });
-  // restore normal tab view
-  switchTab(activeTab in SESS ? activeTab : (TABS.find(t=>t.type!=='sftp')||TABS[0]).id);
+  const fallback = TABS.find(t => t.type !== 'sftp') || TABS[0];
+  switchTab(activeTab in SESS || activeTab in LOCAL_SESS ? activeTab : fallback.id);
 }
 
 function tileTerminals(terms, W, H) {
-  const n = terms.length;
-  if (!n) return;
+  const n = terms.length; if (!n) return;
   const gap = 4;
   const cols = Math.ceil(Math.sqrt(n));
   const rows = Math.ceil(n / cols);
   const w = Math.floor((W - gap * (cols + 1)) / cols);
   const h = Math.floor((H - gap * (rows + 1)) / rows);
-  terms.forEach(([id, s], i) => {
+  terms.forEach(([,s], i) => {
     const col = i % cols, row = Math.floor(i / cols);
-    const x = gap + col * (w + gap);
-    const y = gap + row * (h + gap);
-    s.div.style.left   = x + 'px';
-    s.div.style.top    = y + 'px';
-    s.div.style.width  = w + 'px';
+    s.div.style.left = (gap + col * (w + gap)) + 'px';
+    s.div.style.top  = (gap + row * (h + gap)) + 'px';
+    s.div.style.width = w + 'px';
     s.div.style.height = h + 'px';
   });
 }
@@ -967,10 +1327,8 @@ function initGridInteract() {
       listeners: {
         move(e) {
           const t = e.target;
-          const x = (parseFloat(t.style.left) || 0) + e.dx;
-          const y = (parseFloat(t.style.top)  || 0) + e.dy;
-          t.style.left = x + 'px';
-          t.style.top  = y + 'px';
+          t.style.left = ((parseFloat(t.style.left) || 0) + e.dx) + 'px';
+          t.style.top  = ((parseFloat(t.style.top)  || 0) + e.dy) + 'px';
         }
       }
     })
@@ -983,17 +1341,21 @@ function initGridInteract() {
           const pRect = t.parentElement.getBoundingClientRect();
           t.style.width  = e.rect.width  + 'px';
           t.style.height = e.rect.height + 'px';
-          t.style.left   = (e.rect.left  - pRect.left) + 'px';
-          t.style.top    = (e.rect.top   - pRect.top)  + 'px';
+          t.style.left   = (e.rect.left - pRect.left) + 'px';
+          t.style.top    = (e.rect.top  - pRect.top)  + 'px';
           const id = t.dataset.id;
-          const s = SESS[id];
+          const s = SESS[id] || LOCAL_SESS[id];
           if (s) try { s.fit.fit(); } catch(_) {}
         },
         end(e) {
           const id = e.target.dataset.id;
-          const s = SESS[id];
+          const s = SESS[id] || LOCAL_SESS[id];
           if (s) {
-            try { s.fit.fit(); invoke('pty_resize',{sessionId:id,rows:s.term.rows,cols:s.term.cols}); } catch(_) {}
+            try {
+              s.fit.fit();
+              if (id in LOCAL_SESS) invoke('pty_resize_local',{sessionId:id,rows:s.term.rows,cols:s.term.cols});
+              else invoke('ssh_resize',{sessionId:id,rows:s.term.rows,cols:s.term.cols});
+            } catch(_) {}
           }
         }
       }
@@ -1001,13 +1363,32 @@ function initGridInteract() {
 }
 
 function refitAll() {
-  Object.entries(SESS).forEach(([id, s]) => {
-    try { s.fit.fit(); invoke('pty_resize',{sessionId:id,rows:s.term.rows,cols:s.term.cols}); } catch(_) {}
+  getAllTermEntries().forEach(([id, s]) => {
+    try {
+      s.fit.fit();
+      if (id in LOCAL_SESS) invoke('pty_resize_local',{sessionId:id,rows:s.term.rows,cols:s.term.cols});
+      else invoke('ssh_resize',{sessionId:id,rows:s.term.rows,cols:s.term.cols});
+    } catch(_) {}
   });
 }
 
-// ── Terminal ──
-function openTerminal(host) {
+function afterTermClose(id) {
+  if (gridMode) {
+    const remaining = getAllTermEntries();
+    if (!remaining.length) { exitGridMode(); return; }
+    const stack = $('#stack');
+    tileTerminals(remaining, stack.clientWidth, stack.clientHeight);
+    try { interact('.grid-item').unset(); } catch(_) {}
+    initGridInteract();
+    renderTabs(); setTimeout(refitAll, 80);
+  } else {
+    if (activeTab === id) switchTab(TABS.length ? TABS[TABS.length-1].id : 'home');
+    else renderTabs();
+  }
+}
+
+// ── SSH Terminal (native russh) ──
+function openSshTerminal(host) {
   if (!host.hostname) { toast('Host tidak punya alamat'); return; }
   const id = 'sess-' + Math.random().toString(36).slice(2, 10);
   const title = (host.label || host.hostname).slice(0, 24);
@@ -1015,17 +1396,15 @@ function openTerminal(host) {
   const div = document.createElement('div');
   div.className = 'pane term'; div.dataset.id = id;
 
-  // label / drag handle
   const lbl = document.createElement('div');
   lbl.className = 'term-label';
   lbl.innerHTML = `<span class="tl-dot"></span><span class="tl-name">${esc(title)}</span><button class="tl-close" title="Tutup">&#215;</button>`;
-  lbl.querySelector('.tl-close').onclick = () => closeTerminal(id);
+  lbl.querySelector('.tl-close').onclick = () => closeSshTerminal(id);
   div.appendChild(lbl);
 
   const inner = document.createElement('div');
   inner.className = 'termhost';
   div.appendChild(inner);
-
   $('#stack').appendChild(div);
 
   const term = new Terminal({
@@ -1035,22 +1414,20 @@ function openTerminal(host) {
   });
   const fit = new FitAddon.FitAddon();
   term.loadAddon(fit); term.open(inner);
+  attachTermClipboard(term);
   SESS[id] = { term, fit, div, alive: true };
   TABS.push({ id, title, type:'term' });
 
   if (gridMode) {
-    // add to grid
     const stack = $('#stack');
-    const W = stack.clientWidth, H = stack.clientHeight;
-    const terms = Object.entries(SESS);
-    tileTerminals(terms, W, H);
-    terms.forEach(([sid, s]) => {
+    const terms = getAllTermEntries();
+    tileTerminals(terms, stack.clientWidth, stack.clientHeight);
+    terms.forEach(([,s]) => {
       s.div.style.display = '';
       if (!s.div.classList.contains('grid-item')) {
         s.div.classList.add('grid-item');
         if (!s.div.querySelector('.resize-corner')) {
-          const rc = document.createElement('div'); rc.className = 'resize-corner';
-          s.div.appendChild(rc);
+          const rc = document.createElement('div'); rc.className = 'resize-corner'; s.div.appendChild(rc);
         }
       }
     });
@@ -1063,30 +1440,20 @@ function openTerminal(host) {
   }
   fit.fit();
 
-  invoke('pty_open', { sessionId:id, host, rows:term.rows, cols:term.cols })
-    .catch(e => { term.write('\r\n\x1b[31mGagal: ' + e + '\x1b[0m\r\n'); SESS[id].alive = false; renderTabs(); });
-  term.onData(d => invoke('pty_input', { sessionId:id, data:d }).catch(() => {}));
+  term.write(`\x1b[33mConnecting to ${String(host.hostname).replace(/[\x00-\x1f\x7f]/g,'')}...\x1b[0m\r\n`);
+
+  invoke('ssh_open', { sessionId:id, host, rows:term.rows, cols:term.cols })
+    .catch(e => { term.write('\r\n\x1b[31mGagal: ' + e + '\x1b[0m\r\n'); if (String(e).includes('HOST KEY VERIFICATION FAILED')) toast('Host key berubah! Koneksi ditolak.'); SESS[id].alive = false; renderTabs(); });
+  term.onData(d => invoke('ssh_input', { sessionId:id, data:d }).catch(() => {}));
 }
 
-function closeTerminal(id) {
+function closeSshTerminal(id) {
   const s = SESS[id]; if (!s) return;
-  invoke('pty_close', { sessionId:id }).catch(() => {});
+  invoke('ssh_close', { sessionId:id }).catch(() => {});
   try { s.term.dispose(); } catch(_) {}
   s.div.remove(); delete SESS[id];
   const i = TABS.findIndex(t => t.id === id); if (i >= 0) TABS.splice(i, 1);
-  if (gridMode) {
-    const remaining = Object.keys(SESS);
-    if (!remaining.length) { exitGridMode(); return; }
-    const stack = $('#stack');
-    const W = stack.clientWidth, H = stack.clientHeight;
-    tileTerminals(Object.entries(SESS), W, H);
-    try { interact('.grid-item').unset(); } catch(_) {}
-    initGridInteract();
-    renderTabs(); setTimeout(refitAll, 80);
-  } else {
-    if (activeTab === id) switchTab(TABS.length ? TABS[TABS.length-1].id : 'home');
-    else renderTabs();
-  }
+  afterTermClose(id);
 }
 
 function b64ToBytes(b64) {
@@ -1094,9 +1461,13 @@ function b64ToBytes(b64) {
   for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
   return u;
 }
-listen('pty-output', e => { const s = SESS[e.payload.id]; if (s) s.term.write(b64ToBytes(e.payload.data)); });
-listen('pty-exit',   e => {
-  const s = SESS[e.payload.id]; if (!s) return;
+listen('pty-output', e => {
+  const s = SESS[e.payload.id] || LOCAL_SESS[e.payload.id];
+  if (s) s.term.write(b64ToBytes(e.payload.data));
+});
+listen('pty-exit', e => {
+  const s = SESS[e.payload.id] || LOCAL_SESS[e.payload.id];
+  if (!s) return;
   s.alive = false;
   s.term.write('\r\n\x1b[90m[sesi berakhir]\x1b[0m\r\n');
   const lbl = s.div.querySelector('.term-label');
@@ -1122,7 +1493,7 @@ function openSftp(host) {
       </div>
       <div class="sftp-files"></div>
       <div class="sftp-bar">
-        <button class="sact sftp-ul">Upload ›</button>
+        <button class="sact sftp-ul">Upload &rsaquo;</button>
         <span class="sftp-st" data-side="local">Siap</span>
       </div>
     </div>
@@ -1135,14 +1506,13 @@ function openSftp(host) {
       </div>
       <div class="sftp-files"></div>
       <div class="sftp-bar">
-        <button class="sact sftp-dl">‹ Download</button>
+        <button class="sact sftp-dl">&lsaquo; Download</button>
         <span class="sftp-st" data-side="remote">Siap</span>
       </div>
     </div>
   </div>`;
   $('#stack').appendChild(div);
-  const remoteHome = host.user ? '/home/' + host.user : '~';
-  const state = { div, host, localPath:'', remotePath:remoteHome, localSel:null, remoteSel:null };
+  const state = { div, host, localPath:'', remotePath:'', localSel:null, remoteSel:null };
   SFTP_STATE[id] = state;
   TABS.push({ id, title, type:'sftp' });
   switchTab(id);
@@ -1217,7 +1587,7 @@ function renderFileList(el, entries, side, sftpId) {
   if (!entries.length) { el.innerHTML = '<div class="sftp-load">Kosong</div>'; return; }
   entries.forEach(f => {
     const row = document.createElement('div'); row.className = 'sftp-row';
-    row.innerHTML = `<span class="ico">${f.is_dir ? '📁' : '📄'}</span><span class="fn">${esc(f.name)}</span><span class="fs">${esc(f.size)}</span>`;
+    row.innerHTML = `<span class="ico">${f.is_dir ? '\ud83d\udcc1' : '\ud83d\udcc4'}</span><span class="fn">${esc(f.name)}</span><span class="fs">${esc(f.size)}</span>`;
     row.addEventListener('click', () => {
       el.querySelectorAll('.sftp-row.selected').forEach(r => r.classList.remove('selected'));
       row.classList.add('selected');
@@ -1271,18 +1641,24 @@ function setSftpSt(id, side, msg) {
 // ── Global events ──
 window.addEventListener('resize', () => {
   if (gridMode) { refitAll(); return; }
-  const s = SESS[activeTab];
-  if (s) try { s.fit.fit(); invoke('pty_resize',{sessionId:activeTab,rows:s.term.rows,cols:s.term.cols}); } catch(_) {}
+  const s = SESS[activeTab] || LOCAL_SESS[activeTab];
+  if (s) try {
+    s.fit.fit();
+    if (activeTab in LOCAL_SESS) invoke('pty_resize_local',{sessionId:activeTab,rows:s.term.rows,cols:s.term.cols});
+    else invoke('ssh_resize',{sessionId:activeTab,rows:s.term.rows,cols:s.term.cols});
+  } catch(_) {}
 });
 document.addEventListener('keydown', e => {
   const inApp = !$('#app').classList.contains('hidden');
   if (!inApp) return;
   if (e.ctrlKey && e.key === 'k') { e.preventDefault(); lnOpen ? closeLauncher() : openLauncher(); }
   if (e.ctrlKey && e.key === 'g') { e.preventDefault(); toggleGrid(); }
+  if (e.ctrlKey && e.key === 't') { e.preventDefault(); openLocalTerminal(); }
   if (e.key === 'Escape') {
     if (lnOpen) closeLauncher();
     else if ($('#sidePanel').classList.contains('open')) closePanel();
     else if (!$('#restoreModal').classList.contains('hidden')) $('#restoreModal').classList.add('hidden');
+    else if (!$('#cloudModal').classList.contains('hidden')) $('#cloudModal').classList.add('hidden');
   }
 });
 
